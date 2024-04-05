@@ -1,0 +1,16 @@
+name "sdc"
+description "A custom compiler"
+authors "Juraj B."
+copyright "Copyright (C) 2024, Juraj B."
+license "proprietary"
+
+dependency "lib" version="*"
+
+buildType "debug" {
+	buildOptions "debugMode" "debugInfo" "betterC"
+}
+buildType "release" {
+	buildOptions "releaseMode" "inline" "optimize" "warningsAsErrors" "betterC"
+}
+
+targetPath "bin/$BUILD_TYPE"
