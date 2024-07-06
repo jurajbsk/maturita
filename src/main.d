@@ -1,4 +1,5 @@
 import lib.string;
+import sdc.parser;
 
 extern(C) int main(int argc, char** args)
 {
@@ -21,4 +22,7 @@ extern(C) int main(int argc, char** args)
 		}
 	}
 
+	// AST
+	AST ast = parse("void fun() {}");
+	return 0;
 }
