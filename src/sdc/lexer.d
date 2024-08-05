@@ -2,18 +2,21 @@ module sdc.lexer;
 import lib.io;
 public import sdc.lexertypes;
 
-enum string[] tokenTable = [
-	TokenType.ScopeStart: "{",
-	TokenType.ScopeEnd: "}",
-	TokenType.ParenOpen: "(",
-	TokenType.ParenClose: ")",
-	TokenType.LineEnd: ";",
+immutable string[] resKeywords = [
 	TokenType.Module: "module",
 	TokenType.Import: "import"
+];
+immutable char[] resSymbols = [
+	TokenType.ScopeStart: '{',
+	TokenType.ScopeEnd: '}',
+	TokenType.ArgOpen: '(',
+	TokenType.ArgClose: ')',
+	TokenType.LineEnd: ';',
 ];
 
 struct Tokenizer {
 	string code;
+	uint cursor;
 	uint locs;
 
 	Token current;
@@ -21,13 +24,25 @@ struct Tokenizer {
 	Token next()
 	{
 		Token token;
-		string[tokenTable.length] table = tokenTable;
 		uint i;
 		loop: while(true) {
-			string buf = code[0..i];
+			string buf = code[cursor..i];
+			// Reserved keywords
 			switch(buf) {
 				case "void": {
-					token = Token(TokenType.Type, TokenVal(Typing.Void));
+					token = Token(TokenType.Type, TokenVal(LangType.Void));
+				} break loop;
+				default: break;
+			}
+			// Reserved symbols
+			switch(buf[$-1]) {
+				static foreach(i0, symbol; resSymbols) {
+					case symbol: {
+						token = Token(cast(TokenType)i0);
+					} break loop;
+				}
+				case 0: {
+					token = Token(TokenType.EOF);
 				} break loop;
 				default: break;
 			}
@@ -37,8 +52,7 @@ struct Tokenizer {
 				break loop;
 			}
 		}
-
-		code = code[i..$];
+		cursor += i;
 		current = token;
 		return token;
 	}

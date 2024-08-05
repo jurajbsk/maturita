@@ -1,5 +1,6 @@
 import lib.string;
 import sdc.parser;
+import lib.memory;
 
 extern(C) int main(int argc, char** args)
 {
@@ -23,6 +24,6 @@ extern(C) int main(int argc, char** args)
 	}
 
 	// AST
-	AST ast = parse("void fun() {}");
+	List!AST ast = parse("void fun() {}");
 	return 0;
 }

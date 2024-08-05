@@ -44,59 +44,29 @@ enum ExprType {
 struct Expr {
 	ExprType exprType;
 	string exprValue;
-	Typing type;
+	LangType type;
 }
 
-AST parse(string code)
+immutable Token[] symTokTable = [
+
+];
+List!AST parse(string code)
 {
-	AST root;
-	Tokenizer tok = {code};
-	List!AST buffer;
-	Stack stack = Stack(&root);
+	Tokenizer tok = Tokenizer(code);
+	List!AST buffer = List!AST([AST(ExprType.File)]);
+	Stack stack = Stack(&buffer[0]);
+
 	loop: while(true) {
 		with(Token) switch(tok.next)
 		{
-			case Type: {
-				Typing type = tok.value.type;
-				if(tok.expectNext(Identifier))
-				{
-					string ident = tok.value.identifier;
-					// Function
-					if(tok.next == (ParenOpen)) {
-						tok.expectNext(ParenClose);
-						if(tok.expectNext(ScopeStart)) {
-							AST* func = buffer.add(AST(ExprType.FuncDecl, ident, type));
-							stack.push(func);
-						}
-					}
-					// Variable
-					else if(tok.expectAny!([Operator, LineEnd])) {
-						stack.push(buffer.add(AST(ExprType.VarDecl)));
-					}
-				}
-			} break;
-
-			case Identifier: {
-				
-			} break;
-
-			case ScopeEnd: {
-				stack.pop();
-			} break;
-
-			case Module: {
-				if(tok.expectNext(Identifier)) {
-					root.expr.exprValue = tok.current.value.identifier;
-					tok.expectNext(LineEnd);
-				}
+			default: {
 			} break;
 
 			case EOF: break loop;
-			default: break;
 		}
 		//AST* nextItem = buffer.add;
 		//stack[0].right = nextItem;
 		//stack[0] = nextItem;
 	}
-	return root;
+	return buffer;
 }

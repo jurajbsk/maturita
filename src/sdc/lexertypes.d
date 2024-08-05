@@ -1,10 +1,12 @@
 module sdc.lexertypes;
 
 enum TokenType {
+	Unknown,
+	
 	ScopeStart,
 	ScopeEnd,
-	ParenOpen,
-	ParenClose,
+	ArgOpen,
+	ArgClose,
 	LineEnd,
 
 	Operator,
@@ -15,7 +17,6 @@ enum TokenType {
 	Identifier,
 	Number,
 	EOF,
-	Unknown
 }
 struct Token {
 	TokenType type;
@@ -23,7 +24,7 @@ struct Token {
 	TokenVal value;
 }
 
-enum Typing {
+enum LangType {
 	Enum,
 	Void,
 	Int,
@@ -37,7 +38,7 @@ enum Operator {
 }
 
 union TokenVal {
-	Typing type;
+	LangType type;
 	Operator op;
 	string identifier;
 }
