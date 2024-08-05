@@ -5,7 +5,6 @@ import sdc.lexer;
 
 struct Stack {
 	List!(AST*) buffer;
-	alias buffer this;
 	uint counter;
 
 	this(AST* start)
@@ -22,51 +21,61 @@ struct Stack {
 		counter--;
 		return buffer[counter];
 	}
-	AST* last() => buffer[counter-1];
+	AST* last() => buffer[$-1];
 }
 
 struct AST {
-	Expr expr;
+	Node node;
 	AST* left;
 	AST* right;
 	this(S...)(S args)
 	{
-		expr = Expr(args);
+		node = Node(args);
 	}
 }
 
-enum ExprType {
+enum NodeType {
 	File,
-	FuncDecl,
-	VarDecl,
+	FuncDef,
 	Assign
 }
-struct Expr {
-	ExprType exprType;
-	string exprValue;
-	LangType type;
+struct Node {
+	NodeType nodeType;
+	string nodeValue;
 }
 
-immutable Token[] symTokTable = [
-
-];
 List!AST parse(string code)
 {
 	Tokenizer tok = Tokenizer(code);
-	List!AST buffer = List!AST([AST(ExprType.File)]);
+	List!AST buffer;
+	buffer.add(AST(NodeType.File));
 	Stack stack = Stack(&buffer[0]);
 
-	loop: while(true) {
-		with(Token) switch(tok.next)
+	loop: while(tok.next != Token.EOF) {
+		AST* item = buffer.add;
+		with(NodeType)
+		switch(stack.last.node.nodeType)
 		{
 			default: {
 			} break;
-
-			case EOF: break loop;
+			case File: {
+				switch(tok.current) {
+					case TokenType.Type: {
+						if(!tok.expect(TokenType.Identifier)) {
+							break loop;
+						}
+						item.node = Node(FuncDef, tok.value.identifier);
+						tok.expect(TokenType.ArgOpen);
+						tok.expect(TokenType.ArgClose);
+						tok.expect(TokenType.ScopeStart);
+						tok.expect(TokenType.ScopeEnd);
+						stack.last.left = item;
+					} break;
+					default: break loop;
+				}
+			} break;
+			//case EOF: break loop;
 		}
-		//AST* nextItem = buffer.add;
-		//stack[0].right = nextItem;
-		//stack[0] = nextItem;
 	}
 	return buffer;
 }

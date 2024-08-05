@@ -4,7 +4,8 @@ public import sdc.lexertypes;
 
 immutable string[] resKeywords = [
 	TokenType.Module: "module",
-	TokenType.Import: "import"
+	TokenType.Import: "import",
+	TokenType.Type: "void"
 ];
 immutable char[] resSymbols = [
 	TokenType.ScopeStart: '{',
@@ -25,19 +26,22 @@ struct Tokenizer {
 	{
 		Token token;
 		uint i;
-		loop: while(true) {
-			string buf = code[cursor..i];
+		loop: while(++i) {
+			string buf = code[cursor..i+cursor];
 			// Reserved keywords
-			switch(buf) {
-				case "void": {
-					token = Token(TokenType.Type, TokenVal(LangType.Void));
-				} break loop;
-				default: break;
+			if(buf == "void") {
+				token = Token(TokenType.Type, TokenVal(LangType.Void));
+				break loop;
 			}
 			// Reserved symbols
 			switch(buf[$-1]) {
 				static foreach(i0, symbol; resSymbols) {
 					case symbol: {
+						if(i > 1) {
+							i--;
+							token = Token(TokenType.Identifier, TokenVal(identifier: buf[0..$-1]));
+							break loop;
+						}
 						token = Token(cast(TokenType)i0);
 					} break loop;
 				}
@@ -46,9 +50,13 @@ struct Tokenizer {
 				} break loop;
 				default: break;
 			}
-			i++;
-			if(code[i] == ' ') {
-				token = Token(TokenType.Identifier, TokenVal(identifier: code[0..i-1]));
+			if(buf[i-1] == ' ') {
+				if(i == 1) {
+					cursor++;
+					i--;
+					continue;
+				}
+				token = Token(TokenType.Identifier, TokenVal(identifier: buf));
 				break loop;
 			}
 		}
@@ -59,28 +67,29 @@ struct Tokenizer {
 
 	bool expect(TokenType type)
 	{
+		next();
 		bool expected = (current == type);
 		if(!expected) {
 			writeln("Expected '", type, "' instead of '", );
 		}
 		return expected;
 	}
-	bool expectAny(TokenType[] types)()
-	{
-		bool res;
-		foreach(type; types) {
-			res |= (current == type);
-		}
-		return res;
-	}
-	bool expectNext(TokenType type)
-	{
-		next();
-		return expect(type);
-	}
-	bool expectAnyNext(TokenType[] types)()
-	{
-		next();
-		return expectAny!(types);
-	}
+	// bool expectAny(TokenType[] types)()
+	// {
+	// 	bool res;
+	// 	foreach(type; types) {
+	// 		res |= (current == type);
+	// 	}
+	// 	return res;
+	// }
+	// bool expectNext(TokenType type)
+	// {
+	// 	next();
+	// 	return expect(type);
+	// }
+	// bool expectAnyNext(TokenType[] types)()
+	// {
+	// 	next();
+	// 	return expectAny!(types);
+	// }
 }
