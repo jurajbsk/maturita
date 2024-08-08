@@ -3,16 +3,16 @@ import lib.io;
 public import sdc.lexertypes;
 
 immutable string[] resKeywords = [
-	TokenType.Module: "module",
-	TokenType.Import: "import",
-	TokenType.Type: "void"
+	TokType.Module: "module",
+	TokType.Import: "import",
+	TokType.Type: "void"
 ];
 immutable char[] resSymbols = [
-	TokenType.ScopeStart: '{',
-	TokenType.ScopeEnd: '}',
-	TokenType.ArgOpen: '(',
-	TokenType.ArgClose: ')',
-	TokenType.LineEnd: ';',
+	TokType.LBrace: '{',
+	TokType.RBrace: '}',
+	TokType.LParen: '(',
+	TokType.RParen: ')',
+	TokType.LineEnd: ';',
 ];
 
 struct Tokenizer {
@@ -30,7 +30,7 @@ struct Tokenizer {
 			string buf = code[cursor..i+cursor];
 			// Reserved keywords
 			if(buf == "void") {
-				token = Token(TokenType.Type, TokenVal(LangType.Void));
+				token = Token(TokType.Type, TokenVal(LangType.Void));
 				break loop;
 			}
 			// Reserved symbols
@@ -39,14 +39,14 @@ struct Tokenizer {
 					case symbol: {
 						if(i > 1) {
 							i--;
-							token = Token(TokenType.Identifier, TokenVal(identifier: buf[0..$-1]));
+							token = Token(TokType.Ident, TokenVal(Ident: buf[0..$-1]));
 							break loop;
 						}
-						token = Token(cast(TokenType)i0);
+						token = Token(cast(TokType)i0);
 					} break loop;
 				}
 				case 0: {
-					token = Token(TokenType.EOF);
+					token = Token(TokType.EOF);
 				} break loop;
 				default: break;
 			}
@@ -56,7 +56,7 @@ struct Tokenizer {
 					i--;
 					continue;
 				}
-				token = Token(TokenType.Identifier, TokenVal(identifier: buf));
+				token = Token(TokType.Ident, TokenVal(Ident: buf));
 				break loop;
 			}
 		}
@@ -65,7 +65,7 @@ struct Tokenizer {
 		return token;
 	}
 
-	bool expect(TokenType type)
+	bool expect(TokType type)
 	{
 		next();
 		bool expected = (current == type);
@@ -74,7 +74,7 @@ struct Tokenizer {
 		}
 		return expected;
 	}
-	// bool expectAny(TokenType[] types)()
+	// bool expectAny(TokType[] types)()
 	// {
 	// 	bool res;
 	// 	foreach(type; types) {
@@ -82,12 +82,12 @@ struct Tokenizer {
 	// 	}
 	// 	return res;
 	// }
-	// bool expectNext(TokenType type)
+	// bool expectNext(TokType type)
 	// {
 	// 	next();
 	// 	return expect(type);
 	// }
-	// bool expectAnyNext(TokenType[] types)()
+	// bool expectAnyNext(TokType[] types)()
 	// {
 	// 	next();
 	// 	return expectAny!(types);

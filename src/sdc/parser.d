@@ -60,15 +60,15 @@ List!AST parse(string code)
 			} break;
 			case File: {
 				switch(tok.current) {
-					case TokenType.Type: {
-						if(!tok.expect(TokenType.Identifier)) {
+					case TokType.Type: {
+						if(!tok.expect(TokType.Ident)) {
 							break loop;
 						}
 						item.node = Node(FuncDef, tok.value.identifier);
-						tok.expect(TokenType.ArgOpen);
-						tok.expect(TokenType.ArgClose);
-						tok.expect(TokenType.ScopeStart);
-						tok.expect(TokenType.ScopeEnd);
+						tok.expect(TokType.LParen);
+						tok.expect(TokType.RParen);
+						tok.expect(TokType.LBrace);
+						tok.expect(TokType.RBrace);
 						stack.last.left = item;
 					} break;
 					default: break loop;

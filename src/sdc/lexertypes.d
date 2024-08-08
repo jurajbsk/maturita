@@ -1,12 +1,12 @@
 module sdc.lexertypes;
 
-enum TokenType {
+enum TokType : ubyte {
 	Unknown,
 	
-	ScopeStart,
-	ScopeEnd,
-	ArgOpen,
-	ArgClose,
+	LBrace,
+	RBrace,
+	LParen,
+	RParen,
 	LineEnd,
 
 	Operator,
@@ -14,12 +14,12 @@ enum TokenType {
 	Import,
 	Type,
 
-	Identifier,
+	Ident,
 	Number,
 	EOF,
 }
 struct Token {
-	TokenType type;
+	TokType type;
 	alias type this;
 	TokenVal value;
 }
