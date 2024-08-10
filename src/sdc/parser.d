@@ -1,7 +1,7 @@
 module sdc.parser;
 import lib.memory;
-import lib.func;
 import sdc.lexer;
+import sdc.grammar;
 
 struct Stack {
 	List!(AST*) buffer;

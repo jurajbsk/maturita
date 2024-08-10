@@ -1,23 +1,6 @@
 module sdc.lexertypes;
+import sdc.grammar : TokType;
 
-enum TokType : ubyte {
-	Unknown,
-	
-	LBrace,
-	RBrace,
-	LParen,
-	RParen,
-	LineEnd,
-
-	Operator,
-	Module,
-	Import,
-	Type,
-
-	Ident,
-	Number,
-	EOF,
-}
 struct Token {
 	TokType type;
 	alias type this;

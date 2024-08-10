@@ -25,9 +25,6 @@ extern(C) int main(int argc, char** args)
 
 	import lib.io;
 	List!AST ast = parse("void fun() {}\0");
-	foreach(cur; ast) {
-		write(cur);
-	} writeln();
 	writeln(ast[0]);
 	return 0;
 }

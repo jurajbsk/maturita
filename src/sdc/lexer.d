@@ -1,18 +1,20 @@
 module sdc.lexer;
 import lib.io;
 public import sdc.lexertypes;
+import sdc.grammar : TokType;
 
 immutable string[] resKeywords = [
 	TokType.Module: "module",
 	TokType.Import: "import",
 	TokType.Type: "void"
 ];
+
 immutable char[] resSymbols = [
 	TokType.LBrace: '{',
 	TokType.RBrace: '}',
 	TokType.LParen: '(',
 	TokType.RParen: ')',
-	TokType.LineEnd: ';',
+	TokType.SemiCol: ';',
 ];
 
 struct Tokenizer {
@@ -35,11 +37,11 @@ struct Tokenizer {
 			}
 			// Reserved symbols
 			switch(buf[$-1]) {
-				static foreach(i0, symbol; resSymbols) {
+				static foreach(i0, symbol; resSymbols[TokType.LBrace..$]) {
 					case symbol: {
 						if(i > 1) {
 							i--;
-							token = Token(TokType.Ident, TokenVal(Ident: buf[0..$-1]));
+							token = Token(TokType.Ident, TokenVal(identifier: buf[0..$-1]));
 							break loop;
 						}
 						token = Token(cast(TokType)i0);
@@ -56,7 +58,7 @@ struct Tokenizer {
 					i--;
 					continue;
 				}
-				token = Token(TokType.Ident, TokenVal(Ident: buf));
+				token = Token(TokType.Ident, TokenVal(identifier: buf));
 				break loop;
 			}
 		}
