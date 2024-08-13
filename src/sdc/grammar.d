@@ -1,23 +1,36 @@
 module sdc.grammar;
 
-union Symbol {
-	TokType term;
-	NonTerm nont;
+struct Symbol {
+	union {
+		TokType term;
+		NonTerm nont;
+	}
+	Type type;
 
 	enum Type : ubyte {
 		Terminal,
-		NonTerminal
-	}
-	Type type() {
-		static assert(TokType.sizeof <= size_t.sizeof);
-		return cast(Type) !(term || !nont.length);
+		NonTerminal,
 	}
 
 	this(TokType t) {
 		term = t;
+		type = Type.Terminal;
 	}
 	this(NonTerm n) {
-		nont = n.def;
+		nont = n;
+		type = Type.NonTerminal;
+	}
+	bool opEquals(const Symbol sym) {
+		if(type != sym.type) {
+			return false;
+		}
+		final switch(type)
+		{
+			case Type.Terminal:
+				return term == sym.term;
+			case Type.NonTerminal:
+				return nont == sym.nont;
+		}
 	}
 }
 enum TokType : ubyte {
@@ -38,56 +51,147 @@ enum TokType : ubyte {
 	Ident,
 	Number,
 	EOF,
-	Repeat
+	Null
 }
-struct NonTerm {
+struct Rule {
 	Symbol[][] def;
-	alias def this;
-
-	TokType[] first() {
-		if(__ctfe) {
-			TokType[] result;
-			foreach(Symbol[] alt; def)
-			{
-				Symbol firstSym = alt[0];
-				with(Symbol.Type)
-				final switch(firstSym.type) {
-					case Terminal: {
-						result ~= firstSym.term;
-					} break;
-					case NonTerminal: {
-						NonTerm n = firstSym.nont;
-						result ~= n.first();
-					} break;
-				}
-			}
-			return result;
-		} assert(0);
-	}
 
 	this(S...)(S symbols) {
 		def = [[]];
-		foreach(cur; symbols) {
-			def[$-1] ~= Symbol(cur);
+		foreach(Symbol cur; symbols) {
+			// foreach (Symbol[] key; def)
+			// {
+				
+			// }
+			def[$-1] ~= cur;
 		}
 	}
 	this(Symbol[][] s) {
 		def = s;
 	}
-	NonTerm opBinary(string op : "|")(NonTerm rhs)
+	Rule opBinary(string op : "|")(Rule rhs)
 	{
 		if(__ctfe) {
-			return NonTerm(def ~ rhs.def);
+			return Rule(def ~ rhs.def);
 		} assert(0);
 	}
 }
 
-alias l = NonTerm;
-alias T = TokType;
-enum Grammar : NonTerm {
-	File = l(FuncDecl),
-	FuncDecl = l(T.Type, T.LParen, T.Ident, /*Args,*/ T.RParen, T.LBrace, /*FuncBody,*/ T.RBrace),
-	Args = l(T.Type) | l([[]]),
-	FuncBody = l()
+TokType[] first(Symbol s)
+{
+	if(__ctfe) {
+		TokType[] result;
+		
+		with(Symbol.Type)
+		final switch(s.type)
+		{
+			case Terminal: {
+				result ~= s.term;
+			} break;
+
+			case NonTerminal: {
+				Rule rule = grammarTable[s.nont];
+
+				foreach(Symbol[] prod; rule.def)
+				{
+					bool hasNull;
+					foreach(Symbol sym; prod)
+					{
+						if(sym == s) {
+							continue;
+						}
+						TokType[] set = sym.first;
+						foreach(TokType tok; set)
+						{
+							if(sym == Symbol(TokType.Null)) {
+								hasNull = true;
+							}
+							else {
+								result ~= tok;
+							}
+						}
+						if(!hasNull) {
+							break;
+						}
+					}
+					if(hasNull) {
+						result ~= TokType.Null;
+					}
+				}
+			} break;
+		}
+		return result;
+	} assert(0);
 }
-pragma(msg, Grammar.File.first);
+TokType[] follow(NonTerm n)
+{
+	if(__ctfe) {
+		TokType[] result;
+
+		foreach(NonTerm curNonterm, Rule rule; grammarTable) {
+			foreach(Symbol[] prod; rule.def) {
+				foreach(i, Symbol symbol; prod)
+				{
+					if(symbol != Symbol(n)) {
+						continue;
+					}
+
+					if(prod.length > i+1) {
+						TokType[] set = prod[i+1].first;
+						bool hasNull;
+						foreach(TokType tok; set) {
+							if(tok == TokType.Null) {
+								hasNull = true;
+							}
+							else {
+								result ~= tok;
+							}
+						}
+						if(hasNull) {
+							if(set == [TokType.Null]) {
+								result ~= curNonterm.follow;
+							} else {
+								result ~= prod[i+1].nont.follow;
+							}
+						}
+					}
+					else if(curNonterm != n) {
+						result ~= curNonterm.follow;
+					}
+				}
+			}
+		}
+		if(!result) {
+			result = [TokType.EOF];
+		}
+		return result;
+	} assert(0);
+}
+
+enum NonTerm : ubyte {
+	File,
+	FuncDecl,
+	Args,
+	FuncBody,
+
+	VarDecl,
+	Test
+}
+alias l = Rule;
+alias T = TokType;
+alias n = NonTerm;
+enum Rule[] grammarTable = [
+	n.File: l(n.FuncDecl),
+	n.FuncDecl: l(n.VarDecl, T.LParen, n.Args, T.RParen, T.LBrace, /*FuncBody,*/ T.RBrace),
+	n.Args: l(n.VarDecl) | l(T.Null),
+	n.FuncBody: l(),
+
+	n.VarDecl: l(T.Type, T.Ident),
+	n.Test: l()
+];
+
+pragma(msg, Symbol(n.File).first);
+pragma(msg, n.Test.follow);
+
+enum O0 = 0;
+enum iIllegal1 = O0;
