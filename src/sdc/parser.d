@@ -2,27 +2,7 @@ module sdc.parser;
 import lib.memory;
 import sdc.lexer;
 import sdc.grammar;
-
-struct Stack {
-	List!(AST*) buffer;
-	uint counter;
-
-	this(AST* start)
-	{
-		buffer.add(start);
-	}
-	void push(AST* element)
-	{
-		buffer.add(element);
-		counter++;
-	}
-	AST* pop()
-	{
-		counter--;
-		return buffer[counter];
-	}
-	AST* last() => buffer[$-1];
-}
+import sdc.parsetable;
 
 struct AST {
 	Node node;
@@ -44,38 +24,58 @@ struct Node {
 	string nodeValue;
 }
 
-List!AST parse(string code)
+List!NonTerm parse(string code)
 {
+	List!NonTerm buffer;
 	Tokenizer tok = Tokenizer(code);
-	List!AST buffer;
-	buffer.add(AST(NodeType.File));
-	Stack stack = Stack(&buffer[0]);
 
-	loop: while(tok.next != Token.EOF) {
-		AST* item = buffer.add;
-		with(NodeType)
-		switch(stack.last.node.nodeType)
-		{
-			default: {
-			} break;
-			case File: {
-				switch(tok.current) {
-					case TokType.Type: {
-						if(!tok.expect(TokType.Ident)) {
-							break loop;
-						}
-						item.node = Node(FuncDef, tok.value.identifier);
-						tok.expect(TokType.LParen);
-						tok.expect(TokType.RParen);
-						tok.expect(TokType.LBrace);
-						tok.expect(TokType.RBrace);
-						stack.last.left = item;
-					} break;
-					default: break loop;
+	enum ParseTable _ptable = makePTable(NonTerm.File);
+	ParseTable ptable = _ptable;
+	List!p_size stack;
+	stack.add(0);
+
+	tok.next;
+	loop: while(true) {
+		Token token = tok.current;
+		p_size state = stack[$-1];
+		Action action = ptable.actionTable[state][token];
+
+		bool nullShift;
+		if(action.type == ActionType.Error) {
+			Action nullAction = ptable.actionTable[state][TokType.Null];
+			if(nullAction.type != ActionType.Error) {
+				action = nullAction;
+				nullShift = true;
+			}
+		}
+		import lib.io;
+		writeln(action);
+
+		with(ActionType)
+		final switch(action.type) {
+			case Shift: {
+				stack.add(action.state);
+				if(!nullShift) {
+					tok.next;
 				}
 			} break;
-			//case EOF: break loop;
+
+			case Reduce: {
+				Prod prod = action.reduce;
+				buffer.add(prod.nonTerm);
+				stack.pop(prod.length);
+				stack.add(ptable.gotoTable[stack[$-1]][prod.nonTerm]);
+			} break;
+
+			case Accept: {
+				break loop;
+			}
+
+			case Error: {
+				assert(0);
+			}
 		}
 	}
+	
 	return buffer;
 }

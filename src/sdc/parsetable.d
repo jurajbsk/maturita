@@ -7,10 +7,9 @@ struct Item {
 	p_size prodId;
     p_size position;
 
-
 	bool complete() {
 		if(__ctfe) {
-			return position >= grammarTable[nonTerm].def[prodId].length;
+			return position == grammarTable[nonTerm].def[prodId].length;
 		} assert(0);
 	}
 }
@@ -19,7 +18,6 @@ Item[] closure(Item item)
 {
 	if(__ctfe) {
 		Item[] result = [item];
-		bool[NonTerm.max] used;
 		
 		for(uint i; i < result.length; i++)
 		{
@@ -27,9 +25,21 @@ Item[] closure(Item item)
 			foreach(j, Symbol[] prod; grammarTable[cur].def)
 			{
 				foreach(Symbol sym; prod) {
-					if(sym.type == Symbol.Type.NonTerminal && !used[sym.nont]) {
-						used[sym.nont] = true;
-						result ~= Item(sym.nont, cast(p_size)j);
+					if(sym.type != Symbol.Type.NonTerminal) {
+						continue;
+					}
+					foreach(k, Symbol[] symProd; grammarTable[sym.nont].def) {
+						Item newItem = Item(sym.nont, cast(p_size)k);
+
+						bool alreadyIn;
+						foreach(Item t; result) {
+							if(newItem == t) {
+								alreadyIn = true;
+							}
+						}
+						if(!alreadyIn) {
+							result ~= newItem;
+						}
 					}
 				}
 			}
@@ -96,6 +106,10 @@ Item[][] canonCollection() {
 	} assert(0);
 }
 
+struct Prod {
+	NonTerm nonTerm;
+	p_size length;
+}
 enum ActionType : ubyte {
 	Error, Shift, Reduce, Accept
 }
@@ -103,12 +117,12 @@ struct Action {
 	ActionType type;
 	union {
 		p_size state;
-		NonTerm reduce;
+		Prod reduce;
 	}
 }
 struct ParseTable {
-	p_size[NonTerm.max][] gotoTable;
-	Action[TokType.max][] actionTable;
+	p_size[NonTerm.max+1][canonCollection.length] gotoTable;
+	Action[TokType.max+1][canonCollection.length] actionTable;
 }
 
 ParseTable makePTable(NonTerm startSym)
@@ -116,8 +130,6 @@ ParseTable makePTable(NonTerm startSym)
 	if(__ctfe) {
 		ParseTable result;
 		Item[][] states = canonCollection();
-		result.actionTable.length = states.length;
-		result.gotoTable.length = states.length;
 
 		foreach(i, Item[] state; states)
 		{
@@ -129,26 +141,27 @@ ParseTable makePTable(NonTerm startSym)
 					else {
 						TokType[] followSet = item.nonTerm.follow;
 						foreach(TokType term; followSet) {
-							result.actionTable[i][term] = Action(ActionType.Reduce, term);
+							Prod prod = Prod(item.nonTerm, cast(p_size)grammarTable[item.nonTerm].def[item.prodId].length);
+							result.actionTable[i][term] = Action(ActionType.Reduce, reduce: prod);
 						}
 					}
 				}
 				else {
 					Symbol curSym = grammarTable[item.nonTerm].def[item.prodId][item.position];
 					p_size nextState;
+					
 					bool goExists;
+					Item[] goSet = goTo(state, curSym);
 					foreach(j, Item[] st; states) {
-						foreach(Item[] st2; states) {
-							if(st == goTo(st2, curSym)) {
-								nextState = cast(p_size) j;
-								goExists = true;
-							}
+						if(st == goSet) {
+							nextState = cast(p_size) j;
+							goExists = true;
+							break;
 						}
 					}
-					assert(goExists);
 					final switch(curSym.type) {
 						case Symbol.Type.Terminal: {
-							result.actionTable[i][curSym.term] = Action(ActionType.Shift, nextState);
+							result.actionTable[i][curSym.term] = Action(ActionType.Shift, state: nextState);
 						} break;
 						case Symbol.Type.NonTerminal: {
 							result.gotoTable[i][curSym.nont] = nextState;
@@ -160,8 +173,3 @@ ParseTable makePTable(NonTerm startSym)
 		return result;
 	} assert(0);
 }
-
-enum c = closure(Item(NonTerm.VarDecl));
-//pragma(msg, c);
-//pragma(msg, goNont(c, Symbol(NonTerm.VarDecl)));
-pragma(msg, makePTable(NonTerm.File));

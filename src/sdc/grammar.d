@@ -175,7 +175,6 @@ enum NonTerm : ubyte {
 	FuncBody,
 
 	VarDecl,
-	Test
 }
 alias l = Rule;
 alias T = TokType;
@@ -187,11 +186,4 @@ enum Rule[] grammarTable = [
 	n.FuncBody: l(),
 
 	n.VarDecl: l(T.Type, T.Ident),
-	n.Test: l()
 ];
-
-pragma(msg, Symbol(n.File).first);
-pragma(msg, n.Test.follow);
-
-enum O0 = 0;
-enum iIllegal1 = O0;

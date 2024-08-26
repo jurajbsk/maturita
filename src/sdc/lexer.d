@@ -36,15 +36,16 @@ struct Tokenizer {
 				break loop;
 			}
 			// Reserved symbols
+			enum minElement = TokType.LBrace;
 			switch(buf[$-1]) {
-				static foreach(i0, symbol; resSymbols[TokType.LBrace..$]) {
+				static foreach(i0, symbol; resSymbols[minElement..$]) {
 					case symbol: {
 						if(i > 1) {
 							i--;
 							token = Token(TokType.Ident, TokenVal(identifier: buf[0..$-1]));
 							break loop;
 						}
-						token = Token(cast(TokType)i0);
+						token = Token(cast(TokType)(i0+minElement));
 					} break loop;
 				}
 				case 0: {
@@ -66,32 +67,4 @@ struct Tokenizer {
 		current = token;
 		return token;
 	}
-
-	bool expect(TokType type)
-	{
-		next();
-		bool expected = (current == type);
-		if(!expected) {
-			writeln("Expected '", type, "' instead of '", );
-		}
-		return expected;
-	}
-	// bool expectAny(TokType[] types)()
-	// {
-	// 	bool res;
-	// 	foreach(type; types) {
-	// 		res |= (current == type);
-	// 	}
-	// 	return res;
-	// }
-	// bool expectNext(TokType type)
-	// {
-	// 	next();
-	// 	return expect(type);
-	// }
-	// bool expectAnyNext(TokType[] types)()
-	// {
-	// 	next();
-	// 	return expectAny!(types);
-	// }
 }

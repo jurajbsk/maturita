@@ -1,6 +1,7 @@
 import lib.string;
 import sdc.parser;
 import lib.memory;
+import sdc.grammar:NonTerm;
 
 extern(C) int main(int argc, char** args)
 {
@@ -23,8 +24,8 @@ extern(C) int main(int argc, char** args)
 		}
 	} */
 
-	import lib.io;
-	List!AST ast = parse("void fun() {}\0");
-	writeln(ast[0]);
+	List!NonTerm ast = parse("void fun() {}\0");
+	//pragma(msg, ast);
+	//writeln(ast);
 	return 0;
 }
