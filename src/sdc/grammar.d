@@ -44,6 +44,7 @@ enum TokType : ubyte {
 	RBrace,
 	LParen,
 	RParen,
+	Comma,
 	SemiCol,
 
 	Operator,
@@ -64,6 +65,11 @@ struct Rule {
 				
 			// }
 			def[$-1] ~= cur;
+		}
+	}
+	this(typeof(null) nullable) {
+		if(__ctfe) {
+			def ~= [[Symbol(T.Null)]];
 		}
 	}
 	this(Symbol[][] s) {
@@ -172,7 +178,8 @@ enum NonTerm : ubyte {
 	File,
 	FuncDecl,
 	Args,
-	FuncBody,
+	StmntList,
+	Stmnt,
 
 	VarDecl,
 }
@@ -181,9 +188,9 @@ alias T = TokType;
 alias n = NonTerm;
 enum Rule[] grammarTable = [
 	n.File: l(n.FuncDecl),
-	n.FuncDecl: l(n.VarDecl, T.LParen, n.Args, T.RParen, T.LBrace, /*FuncBody,*/ T.RBrace),
-	n.Args: l(n.VarDecl) | l(T.Null),
-	n.FuncBody: l(),
+	n.FuncDecl: l(n.VarDecl, T.LParen, n.Args, T.RParen, T.LBrace, n.StmntList, T.RBrace),
+	n.Args: l(n.VarDecl) | l(null),
+	n.StmntList: l(n.Stmnt, n.StmntList) | l(null),
 
 	n.VarDecl: l(T.Type, T.Ident),
 ];
