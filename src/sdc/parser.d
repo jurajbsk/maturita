@@ -41,11 +41,13 @@ List!NonTerm parse(string code)
 		p_size state = stack[$-1];
 		Action action = ptable.actionTable[state][token];
 
-		import lib.io;
-		writeln(action);
+		version(ParserDEBUG) {
+			import lib.io;
+			writeln(action);
+		}
 
 		with(ActionType)
-		_switch: final switch(action.type) {
+		actionSwitch: final switch(action.type) {
 			case Shift: {
 				stack.add(action.state);
 				if(!nullState) {
@@ -67,7 +69,7 @@ List!NonTerm parse(string code)
 				if(nullAction.type != ActionType.Error) {
 					action = nullAction;
 					nullState = true;
-					goto _switch;
+					goto actionSwitch;
 				}
 
 				assert(0);

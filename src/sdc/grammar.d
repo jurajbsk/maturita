@@ -178,19 +178,26 @@ enum NonTerm : ubyte {
 	File,
 	FuncDecl,
 	Args,
-	StmntList,
+
 	Stmnt,
+	StmntList,
+	ExprStmnt,
+	StmntType,
 
 	VarDecl,
+	OptComma,
 }
 alias l = Rule;
 alias T = TokType;
 alias n = NonTerm;
 enum Rule[] grammarTable = [
 	n.File: l(n.FuncDecl),
-	n.FuncDecl: l(n.VarDecl, T.LParen, n.Args, T.RParen, T.LBrace, n.StmntList, T.RBrace),
-	n.Args: l(n.VarDecl) | l(null),
-	n.StmntList: l(n.Stmnt, n.StmntList) | l(null),
+	n.FuncDecl: l(n.VarDecl, T.LParen, n.Args, T.RParen, T.LBrace, /*n.StmntList,*/ T.RBrace),
+	n.Args: l(n.VarDecl) | l(n.VarDecl, T.Comma, n.Args) | l(null),
+
+	//n.StmntList: l(n.Stmnt, n.StmntList) | l(null),
+	//n.Stmnt: l(n.StmntType, T.LBrace, n.StmntList, T.RBrace) | l(n.ExprStmnt, T.SemiCol),
+	//n.ExprStmnt: l(),
 
 	n.VarDecl: l(T.Type, T.Ident),
 ];

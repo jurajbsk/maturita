@@ -9,6 +9,7 @@ struct Item {
 
 	bool complete() {
 		if(__ctfe) {
+			assert(grammarTable.length >= nonTerm && grammarTable[nonTerm] != Rule());
 			return position == grammarTable[nonTerm].def[prodId].length;
 		} assert(0);
 	}
@@ -25,7 +26,8 @@ Item[] closure(Item item)
 			foreach(j, Symbol[] prod; grammarTable[cur].def)
 			{
 				foreach(Symbol sym; prod) {
-					if(sym.type != Symbol.Type.NonTerminal) {
+					if(sym.type != Symbol.Type.NonTerminal || sym.nont == cur)
+					{
 						continue;
 					}
 					foreach(k, Symbol[] symProd; grammarTable[sym.nont].def) {
@@ -85,8 +87,8 @@ Item[][] canonCollection() {
 
 		while (true) {
 			bool added = false;
-			foreach (Item[] items; result) {
-				foreach (Symbol sym; allSymbols()) {
+			foreach(Item[] items; result) {
+				foreach(Symbol sym; allSymbols()) {
 					Item[] gotoSet = goTo(items, sym);
 					bool alreadyIn;
 					foreach(Item[] t; result) {
@@ -94,13 +96,13 @@ Item[][] canonCollection() {
 							alreadyIn = true;
 						}
 					}
-					if (gotoSet && !alreadyIn) {
+					if(gotoSet && !alreadyIn) {
 						result ~= gotoSet;
 						added = true;
 					}
 				}
 			}
-			if (!added) break;
+			if(!added) break;
 		}
 		return result;
 	} assert(0);
