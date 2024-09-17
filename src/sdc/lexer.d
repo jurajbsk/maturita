@@ -1,5 +1,5 @@
 module sdc.lexer;
-import lib.io;
+
 public import sdc.lexertypes;
 import sdc.grammar : TokType;
 
@@ -21,27 +21,28 @@ struct Tokenizer {
 	string code;
 	uint cursor;
 	uint locs;
+	ushort length;
 
 	Token current;
-	alias current this;
 	Token next()
 	{
 		Token token;
-		uint i;
-		loop: while(++i) {
-			string buf = code[cursor..i+cursor];
+		length = 0;
+		loop: while(++length)
+		{
+			string buf = code[cursor..cursor+length];
 			// Reserved keywords
 			if(buf == "void") {
-				token = Token(TokType.Type, TokenVal(LangType.Void));
+				token = Token(TokType.Type);
 				break loop;
 			}
 			// Reserved symbols
-			enum minElement = TokType.LBrace;
 			switch(buf[$-1]) {
+				enum minElement = TokType.LBrace;
 				static foreach(i0, symbol; resSymbols[minElement..$]) {
 					case symbol: {
-						if(i > 1) {
-							i--;
+						if(length > 1) {
+							length--;
 							token = Token(TokType.Ident, TokenVal(identifier: buf[0..$-1]));
 							break loop;
 						}
@@ -53,18 +54,21 @@ struct Tokenizer {
 				} break loop;
 				default: break;
 			}
-			if(buf[i-1] == ' ') {
-				if(i == 1) {
+			if(buf[length-1] == ' ') {
+				if(length == 1) {
 					cursor++;
-					i--;
+					length--;
 					continue;
 				}
 				token = Token(TokType.Ident, TokenVal(identifier: buf));
 				break loop;
 			}
 		}
-		cursor += i;
+		cursor += length;
 		current = token;
 		return token;
+	}
+	string curString() {
+		return code[cursor-length..cursor];
 	}
 }

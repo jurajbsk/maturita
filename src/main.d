@@ -24,7 +24,7 @@ extern(C) int main(int argc, char** args)
 		}
 	} */
 
-	List!NonTerm ast = parse("void fun() {}\0");
+	List!ASTNode ast = parse("void fun() {}\0");
 	//pragma(msg, ast);
 	//writeln(ast);
 	return 0;

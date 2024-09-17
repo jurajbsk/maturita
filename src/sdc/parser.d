@@ -4,39 +4,32 @@ import sdc.lexer;
 import sdc.grammar;
 import sdc.parsetable;
 
-struct AST {
-	Node node;
-	AST* left;
-	AST* right;
-	this(S...)(S args)
-	{
-		node = Node(args);
-	}
+union NodeValue {
+	ulong num;
+	string text;
+}
+struct ASTNode {
+	NonTerm nodeType;
+	NodeValue value;
+	p_size childrenIndex;
 }
 
-enum NodeType {
-	File,
-	FuncDef,
-	Assign
-}
-struct Node {
-	NodeType nodeType;
-	string nodeValue;
-}
+enum ParseTable _ptable = makePTable(NonTerm.File);
+immutable ParseTable ptable = _ptable;
 
-List!NonTerm parse(string code)
+List!ASTNode parse(string code)
 {
-	List!NonTerm buffer;
-	Tokenizer tok = Tokenizer(code);
-	tok.next;
-
-	enum ParseTable _ptable = makePTable(NonTerm.File);
-	ParseTable ptable = _ptable;
+	List!ASTNode astBuffer;
 	List!p_size stack;
 	stack.add(0);
 
+	Tokenizer tok = Tokenizer(code);
+	tok.next;
+
 	bool nullState;
-	loop: while(true) {
+	NodeValue value;
+	loop: while(true)
+	{
 		Token token = tok.current;
 		p_size state = stack[$-1];
 		Action action = ptable.actionTable[state][token];
@@ -44,12 +37,22 @@ List!NonTerm parse(string code)
 		version(ParserDEBUG) {
 			import lib.io;
 			writeln(action);
+			writeln(cast(ulong)tok.current);
 		}
 
 		with(ActionType)
 		actionSwitch: final switch(action.type) {
 			case Shift: {
 				stack.add(action.state);
+
+				switch(tok.current) {
+					default: break;
+
+					case Token.Ident: {
+						value.text = tok.curString;
+					} break;
+				}
+
 				if(!nullState) {
 					tok.next;
 				}
@@ -57,9 +60,10 @@ List!NonTerm parse(string code)
 
 			case Reduce: {
 				Prod prod = action.reduce;
-				buffer.add(prod.nonTerm);
 				stack.pop(prod.length);
 				stack.add(ptable.gotoTable[stack[$-1]][prod.nonTerm]);
+
+				astBuffer.add(ASTNode(prod.nonTerm, value, prod.length));
 
 				nullState = false;
 			} break;
@@ -80,6 +84,5 @@ List!NonTerm parse(string code)
 			}
 		}
 	}
-	
-	return buffer;
+	return astBuffer;
 }
