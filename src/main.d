@@ -1,7 +1,8 @@
 import lib.string;
-import sdc.parser;
 import lib.memory;
-import sdc.grammar:NonTerm;
+import sdc.grammar : NonTerm;
+import sdc.parser;
+import sdc.codegen;
 
 extern(C) int main(int argc, char** args)
 {
@@ -25,7 +26,7 @@ extern(C) int main(int argc, char** args)
 	} */
 
 	List!ASTNode ast = parse("void fun() {}\0");
-	//pragma(msg, ast);
-	//writeln(ast);
+	codeGen(ast);
+	
 	return 0;
 }

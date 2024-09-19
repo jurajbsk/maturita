@@ -11,7 +11,7 @@ union NodeValue {
 struct ASTNode {
 	NonTerm nodeType;
 	NodeValue value;
-	p_size childrenIndex;
+	p_size childLen;
 }
 
 enum ParseTable _ptable = makePTable(NonTerm.File);

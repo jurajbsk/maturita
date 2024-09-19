@@ -1,6 +1,5 @@
 module sdc.parsetable;
 import sdc.grammar;
-alias p_size = uint;
 
 struct Item {
     NonTerm nonTerm;

@@ -1,4 +1,5 @@
 module sdc.grammar;
+alias p_size = uint;
 
 struct Symbol {
 	union {
