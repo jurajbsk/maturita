@@ -1,6 +1,97 @@
 module sdc.parsetable;
 import sdc.grammar;
 
+TokType[] first(Symbol s)
+{
+	if(__ctfe) {
+		TokType[] result;
+		
+		with(Symbol.Type)
+		final switch(s.type)
+		{
+			case Terminal: {
+				result ~= s.term;
+			} break;
+
+			case NonTerminal: {
+				Rule rule = grammarTable[s.nont];
+
+				foreach(Symbol[] prod; rule.def)
+				{
+					bool hasNull;
+					foreach(Symbol sym; prod)
+					{
+						if(sym == s) {
+							continue;
+						}
+						TokType[] set = sym.first;
+						foreach(TokType tok; set)
+						{
+							if(sym == Symbol(TokType.Null)) {
+								hasNull = true;
+							}
+							else {
+								result ~= tok;
+							}
+						}
+						if(!hasNull) {
+							break;
+						}
+					}
+					if(hasNull) {
+						result ~= TokType.Null;
+					}
+				}
+			} break;
+		}
+		return result;
+	} assert(0);
+}
+TokType[] follow(NonTerm n)
+{
+	if(__ctfe) {
+		TokType[] result;
+
+		foreach(NonTerm curNonterm, Rule rule; grammarTable) {
+			foreach(Symbol[] prod; rule.def) {
+				foreach(i, Symbol symbol; prod)
+				{
+					if(symbol != Symbol(n)) {
+						continue;
+					}
+
+					if(prod.length > i+1) {
+						TokType[] set = prod[i+1].first;
+						bool hasNull;
+						foreach(TokType tok; set) {
+							if(tok == TokType.Null) {
+								hasNull = true;
+							}
+							else {
+								result ~= tok;
+							}
+						}
+						if(hasNull) {
+							if(set == [TokType.Null]) {
+								result ~= curNonterm.follow;
+							} else {
+								result ~= prod[i+1].nont.follow;
+							}
+						}
+					}
+					else if(curNonterm != n) {
+						result ~= curNonterm.follow;
+					}
+				}
+			}
+		}
+		if(!result) {
+			result = [TokType.EOF];
+		}
+		return result;
+	} assert(0);
+}
+
 struct Item {
     NonTerm nonTerm;
 	p_size prodId;

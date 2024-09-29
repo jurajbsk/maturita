@@ -34,37 +34,13 @@ struct Symbol {
 		}
 	}
 }
-enum TokType : ubyte {
-	Unknown,
-	
-	Module,
-	Import,
-	Type,
 
-	LBrace,
-	RBrace,
-	LParen,
-	RParen,
-	Comma,
-	SemiCol,
-
-	Operator,
-
-	Ident,
-	Number,
-	EOF,
-	Null
-}
 struct Rule {
 	Symbol[][] def;
 
 	this(S...)(S symbols) {
 		def = [[]];
 		foreach(Symbol cur; symbols) {
-			// foreach (Symbol[] key; def)
-			// {
-				
-			// }
 			def[$-1] ~= cur;
 		}
 	}
@@ -84,121 +60,59 @@ struct Rule {
 	}
 }
 
-TokType[] first(Symbol s)
-{
-	if(__ctfe) {
-		TokType[] result;
-		
-		with(Symbol.Type)
-		final switch(s.type)
-		{
-			case Terminal: {
-				result ~= s.term;
-			} break;
+enum TokType : ubyte {
+	EOF,
 
-			case NonTerminal: {
-				Rule rule = grammarTable[s.nont];
+	LBrace,
+	RBrace,
+	LParen,
+	RParen,
+	Comma,
+	SemiCol,
 
-				foreach(Symbol[] prod; rule.def)
-				{
-					bool hasNull;
-					foreach(Symbol sym; prod)
-					{
-						if(sym == s) {
-							continue;
-						}
-						TokType[] set = sym.first;
-						foreach(TokType tok; set)
-						{
-							if(sym == Symbol(TokType.Null)) {
-								hasNull = true;
-							}
-							else {
-								result ~= tok;
-							}
-						}
-						if(!hasNull) {
-							break;
-						}
-					}
-					if(hasNull) {
-						result ~= TokType.Null;
-					}
-				}
-			} break;
-		}
-		return result;
-	} assert(0);
+	Assign,
+
+	Module,
+	Import,
+	Return,
+
+	tVoid,
+	i32,
+	i64,
+
+	Ident,
+	Number,
+	Null
 }
-TokType[] follow(NonTerm n)
-{
-	if(__ctfe) {
-		TokType[] result;
-
-		foreach(NonTerm curNonterm, Rule rule; grammarTable) {
-			foreach(Symbol[] prod; rule.def) {
-				foreach(i, Symbol symbol; prod)
-				{
-					if(symbol != Symbol(n)) {
-						continue;
-					}
-
-					if(prod.length > i+1) {
-						TokType[] set = prod[i+1].first;
-						bool hasNull;
-						foreach(TokType tok; set) {
-							if(tok == TokType.Null) {
-								hasNull = true;
-							}
-							else {
-								result ~= tok;
-							}
-						}
-						if(hasNull) {
-							if(set == [TokType.Null]) {
-								result ~= curNonterm.follow;
-							} else {
-								result ~= prod[i+1].nont.follow;
-							}
-						}
-					}
-					else if(curNonterm != n) {
-						result ~= curNonterm.follow;
-					}
-				}
-			}
-		}
-		if(!result) {
-			result = [TokType.EOF];
-		}
-		return result;
-	} assert(0);
-}
-
 enum NonTerm : ubyte {
 	File,
-	FuncDecl,
-	Args,
 
 	Stmnt,
 	StmntList,
 	ExprStmnt,
 	StmntType,
 
+	FuncDecl,
+	Args,
+
+	FuncInfo,
 	VarDecl,
-	OptComma,
+	Type
 }
 alias l = Rule;
 alias T = TokType;
 alias n = NonTerm;
 enum Rule[] grammarTable = [
 	n.File: l(n.FuncDecl),
-	n.FuncDecl: l(n.VarDecl, T.LParen, n.Args, T.RParen, T.LBrace, /*n.StmntList,*/ T.RBrace),
+
+	n.StmntList: l(n.Stmnt, n.StmntList) | l(null),
+	n.Stmnt: l(n.StmntType, T.LBrace, n.StmntList, T.RBrace) | l(n.ExprStmnt, T.SemiCol),
+	n.ExprStmnt: l(T.Return),
+
+	n.FuncDecl: l(n.FuncInfo, T.LBrace, /*n.StmntList,*/ T.RBrace),
 	n.Args: l(n.VarDecl) | l(n.VarDecl, T.Comma, n.Args) | l(null),
 
-	//n.StmntList: l(n.Stmnt, n.StmntList) | l(null),
-	//n.Stmnt: l(n.StmntType, T.LBrace, n.StmntList, T.RBrace) | l(n.ExprStmnt, T.SemiCol),
-	//n.ExprStmnt: l(),
-
-	n.VarDecl: l(T.Type, T.Ident),
+	n.FuncInfo: l(n.Type, T.Ident, T.LParen, n.Args, T.RParen),
+	n.VarDecl: l(n.Type, T.Ident),
+	n.Type: l(T.tVoid) | l(T.i32) | l(T.i64)
 ];
