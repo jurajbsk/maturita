@@ -1,10 +1,16 @@
 module sdc.parsetable;
 import sdc.grammar;
 
-TokType[] first(Symbol s)
+struct FirstRes {
+	TokType[] toks;
+	alias toks this;
+	bool nullable;
+}
+
+FirstRes first(Symbol s)
 {
 	if(__ctfe) {
-		TokType[] result;
+		FirstRes result;
 		
 		with(Symbol.Type)
 		final switch(s.type)
@@ -18,28 +24,29 @@ TokType[] first(Symbol s)
 
 				foreach(Symbol[] prod; rule.def)
 				{
-					bool hasNull;
+					if(!prod) {
+						result.nullable = true;
+					}
 					foreach(Symbol sym; prod)
 					{
 						if(sym == s) {
 							continue;
 						}
-						TokType[] set = sym.first;
-						foreach(TokType tok; set)
-						{
-							if(sym == Symbol(TokType.Null)) {
-								hasNull = true;
+						FirstRes set = sym.first;
+						foreach(TokType t1; set) {
+							bool duplicate;
+							foreach(TokType t2; result) {
+								if(t1 == t2) {
+									duplicate = true;
+								}
 							}
-							else {
-								result ~= tok;
+							if(!duplicate) {
+								result ~= t1;
 							}
 						}
-						if(!hasNull) {
+						if(!set.nullable) {
 							break;
 						}
-					}
-					if(hasNull) {
-						result ~= TokType.Null;
 					}
 				}
 			} break;
@@ -53,6 +60,7 @@ TokType[] follow(NonTerm n)
 		TokType[] result;
 
 		foreach(NonTerm curNonterm, Rule rule; grammarTable) {
+			TokType[] resultQueue;
 			foreach(Symbol[] prod; rule.def) {
 				foreach(i, Symbol symbol; prod)
 				{
@@ -61,27 +69,32 @@ TokType[] follow(NonTerm n)
 					}
 
 					if(prod.length > i+1) {
-						TokType[] set = prod[i+1].first;
-						bool hasNull;
-						foreach(TokType tok; set) {
-							if(tok == TokType.Null) {
-								hasNull = true;
-							}
-							else {
-								result ~= tok;
-							}
-						}
-						if(hasNull) {
-							if(set == [TokType.Null]) {
+						FirstRes firstSet = prod[i+1].first;
+						if(!firstSet) {
+							if(firstSet.nullable) {
 								result ~= curNonterm.follow;
 							} else {
 								result ~= prod[i+1].nont.follow;
 							}
 						}
+						else {
+							resultQueue ~= firstSet;
+						}
 					}
 					else if(curNonterm != n) {
-						result ~= curNonterm.follow;
+						resultQueue ~= curNonterm.follow;
 					}
+				}
+			}
+			foreach(TokType t1; resultQueue) {
+				bool duplicate;
+				foreach(TokType t2; result) {
+					if(t1 == t2) {
+						duplicate = true;
+					}
+				}
+				if(!duplicate) {
+					result ~= t1;
 				}
 			}
 		}
@@ -105,33 +118,33 @@ struct Item {
 	}
 }
 
-Item[] closure(Item item)
+Item[] closure(Item startItem)
 {
 	if(__ctfe) {
-		Item[] result = [item];
+		Item[] result = [startItem];
 		
 		for(uint i; i < result.length; i++)
 		{
-			NonTerm cur = result[i].nonTerm;
-			foreach(j, Symbol[] prod; grammarTable[cur].def)
+			Item cur = result[i];
+			Symbol[] prod = grammarTable[cur.nonTerm].def[cur.prodId];
+			foreach(Symbol sym; prod[cur.position..$])
 			{
-				foreach(Symbol sym; prod) {
-					if(sym.type != Symbol.Type.NonTerminal || sym.nont == cur)
-					{
-						continue;
-					}
-					foreach(k, Symbol[] symProd; grammarTable[sym.nont].def) {
-						Item newItem = Item(sym.nont, cast(p_size)k);
+				if(sym.type != Symbol.Type.NonTerminal) {
+					continue;
+				}
+				foreach(k, Symbol[] symProd; grammarTable[sym.nont].def)
+				{
+					Item newItem = Item(sym.nont, cast(p_size)k);
 
-						bool alreadyIn;
-						foreach(Item t; result) {
-							if(newItem == t) {
-								alreadyIn = true;
-							}
+					bool exists;
+					foreach(Item item; result) {
+						if(newItem == item) {
+							exists = true;
+							break;
 						}
-						if(!alreadyIn) {
-							result ~= newItem;
-						}
+					}
+					if(!exists) {
+						result ~= newItem;
 					}
 				}
 			}
@@ -144,11 +157,28 @@ Item[] goTo(Item[] items, Symbol sym)
 {
 	if(__ctfe) {
 		Item[] result;
-		foreach (Item item; items)
+		foreach(Item item; items)
 		{
-			if(!item.complete && grammarTable[item.nonTerm].def[item.prodId][item.position] == sym) {
+			if(item.complete) {
+				continue;
+			}
+			Symbol curSym = grammarTable[item.nonTerm].def[item.prodId][item.position];
+			if(curSym == sym) {
 				item.position++;
-				result ~= item.closure();
+				Item[] closure = closure(item);
+
+				foreach(Item newItem; closure) {
+					bool exists;
+					foreach(Item resItem; result) {
+						if(newItem == resItem) {
+							exists = true;
+							break;
+						}
+					}
+					if(!exists) {
+						result ~= newItem;
+					}
+				}
 			}
 		}
 		return result;
@@ -180,13 +210,18 @@ Item[][] canonCollection() {
 			foreach(Item[] items; result) {
 				foreach(Symbol sym; allSymbols()) {
 					Item[] gotoSet = goTo(items, sym);
-					bool alreadyIn;
+
+					if(!gotoSet) {
+						continue;
+					}
+					bool exists;
 					foreach(Item[] t; result) {
 						if(t == gotoSet) {
-							alreadyIn = true;
+							exists = true;
+							break;
 						}
 					}
-					if(gotoSet && !alreadyIn) {
+					if(!exists) {
 						result ~= gotoSet;
 						added = true;
 					}
@@ -251,9 +286,11 @@ ParseTable makePTable(NonTerm startSym)
 							break;
 						}
 					}
+					assert(goExists);
 					final switch(curSym.type) {
 						case Symbol.Type.Terminal: {
-							result.actionTable[i][curSym.term] = Action(ActionType.Shift, state: nextState);
+							Action nextAction = Action(ActionType.Shift, state: nextState);
+							result.actionTable[i][curSym.term] = nextAction;
 						} break;
 						case Symbol.Type.NonTerminal: {
 							result.gotoTable[i][curSym.nont] = nextState;

@@ -46,7 +46,7 @@ struct Rule {
 	}
 	this(typeof(null) nullable) {
 		if(__ctfe) {
-			def ~= [[Symbol(T.Null)]];
+			def ~= [[]];
 		}
 	}
 	this(Symbol[][] s) {
@@ -82,8 +82,6 @@ enum TokType : ubyte {
 
 	Ident,
 	NumLiteral,
-
-	Null
 }
 enum NonTerm : ubyte {
 	File,

@@ -30,7 +30,6 @@ List!ASTNode parse(string code)
 	Tokenizer tok = Tokenizer(code);
 	tok.next;
 
-	bool nullState;
 	NodeValue value;
 	loop: while(true)
 	{
@@ -44,7 +43,7 @@ List!ASTNode parse(string code)
 		}
 
 		with(ActionType)
-		actionSwitch: final switch(action.type) {
+		final switch(action.type) {
 			case Shift: {
 				stack.add(action.state);
 
@@ -87,24 +86,15 @@ List!ASTNode parse(string code)
 					default: break;
 				}
 				astBuffer.add(ASTNode(prod.nonTerm, value));
-				value = NodeValue();
-				
+
 				debug {
 					import lib.io;
-					writeln(prod.nonTerm);
+					writeln(prod.nonTerm, " ", value);
 				}
-
-				nullState = false;
+				value = NodeValue();
 			} break;
 
 			case Error: {
-				Action nullAction = ptable.actionTable[state][TokType.Null];
-				if(nullAction.type != ActionType.Error) {
-					action = nullAction;
-					nullState = true;
-					goto actionSwitch;
-				}
-
 				assert(0, "Error");
 			}
 
