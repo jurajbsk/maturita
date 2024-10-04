@@ -3,7 +3,7 @@ alias p_size = uint;
 
 struct Symbol {
 	union {
-		TokType term;
+		Token term;
 		NonTerm nont;
 	}
 	Type type;
@@ -13,7 +13,7 @@ struct Symbol {
 		NonTerminal,
 	}
 
-	this(TokType t) {
+	this(Token t) {
 		term = t;
 		type = Type.Terminal;
 	}
@@ -60,7 +60,7 @@ struct Rule {
 	}
 }
 
-enum TokType : ubyte {
+enum Token : ubyte {
 	EOF,
 
 	LBrace,
@@ -105,7 +105,7 @@ enum NonTerm : ubyte {
 	Type
 }
 alias l = Rule;
-alias T = TokType;
+alias T = Token;
 alias n = NonTerm;
 enum Rule[] grammarTable = [
 	n.File: l(n.Args, T.RParen),
@@ -129,15 +129,13 @@ enum Rule[] grammarTable = [
 
 	n.Type: l(T.tVoid) | l(T.i32) | l(T.i64)
 ];
-import sdc.parsetable;
-pragma(msg, canonCollection);
 
 struct VarDecl {
-	TokType type;
+	Token type;
 	string ident;
 }
 struct FuncHeader {
-	TokType type;
+	Token type;
 	string ident;
 	VarDecl[] args;
 }

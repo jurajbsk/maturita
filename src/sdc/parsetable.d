@@ -2,7 +2,7 @@ module sdc.parsetable;
 import sdc.grammar;
 
 struct FirstRes {
-	TokType[] toks;
+	Token[] toks;
 	alias toks this;
 	bool nullable;
 }
@@ -33,9 +33,9 @@ FirstRes first(Symbol s)
 							continue;
 						}
 						FirstRes set = sym.first;
-						foreach(TokType t1; set) {
+						foreach(Token t1; set) {
 							bool duplicate;
-							foreach(TokType t2; result) {
+							foreach(Token t2; result) {
 								if(t1 == t2) {
 									duplicate = true;
 								}
@@ -54,13 +54,13 @@ FirstRes first(Symbol s)
 		return result;
 	} assert(0);
 }
-TokType[] follow(NonTerm n)
+Token[] follow(NonTerm n)
 {
 	if(__ctfe) {
-		TokType[] result;
+		Token[] result;
 
 		foreach(NonTerm curNonterm, Rule rule; grammarTable) {
-			TokType[] resultQueue;
+			Token[] resultQueue;
 			foreach(Symbol[] prod; rule.def) {
 				foreach(i, Symbol symbol; prod)
 				{
@@ -86,9 +86,9 @@ TokType[] follow(NonTerm n)
 					}
 				}
 			}
-			foreach(TokType t1; resultQueue) {
+			foreach(Token t1; resultQueue) {
 				bool duplicate;
-				foreach(TokType t2; result) {
+				foreach(Token t2; result) {
 					if(t1 == t2) {
 						duplicate = true;
 					}
@@ -99,7 +99,7 @@ TokType[] follow(NonTerm n)
 			}
 		}
 		if(!result) {
-			result = [TokType.EOF];
+			result = [Token.EOF];
 		}
 		return result;
 	} assert(0);
@@ -193,8 +193,8 @@ Symbol[] allSymbols()
 			NonTerm nont = __traits(getMember, NonTerm, member);
 			result ~= Symbol(nont);
 		}}
-		static foreach(member; [__traits(allMembers, TokType)]) {{
-			TokType term = __traits(getMember, TokType, member);
+		static foreach(member; [__traits(allMembers, Token)]) {{
+			Token term = __traits(getMember, Token, member);
 			result ~= Symbol(term);
 		}}
 		return result;
@@ -249,7 +249,7 @@ struct Action {
 }
 struct ParseTable {
 	p_size[NonTerm.max+1][canonCollection.length] gotoTable;
-	Action[TokType.max+1][canonCollection.length] actionTable;
+	Action[Token.max+1][canonCollection.length] actionTable;
 }
 
 ParseTable makePTable(NonTerm startSym)
@@ -266,8 +266,8 @@ ParseTable makePTable(NonTerm startSym)
 						result.actionTable[i] = Action(ActionType.Accept);
 					}
 					else {
-						TokType[] followSet = item.nonTerm.follow;
-						foreach(TokType term; followSet) {
+						Token[] followSet = item.nonTerm.follow;
+						foreach(Token term; followSet) {
 							Prod prod = Prod(item.nonTerm, cast(p_size)grammarTable[item.nonTerm].def[item.prodId].length);
 							result.actionTable[i][term] = Action(ActionType.Reduce, reduce: prod);
 						}

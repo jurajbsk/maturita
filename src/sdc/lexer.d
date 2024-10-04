@@ -1,19 +1,21 @@
 module sdc.lexer;
-
-import sdc.grammar : TokType;
-
-immutable string[] resKeywords = [
-	TokType.Module: "module",
-	TokType.Import: "import",
-	TokType.Type: "void"
-];
+import sdc.grammar : Token, T;
 
 immutable char[] resSymbols = [
-	TokType.LBrace: '{',
-	TokType.RBrace: '}',
-	TokType.LParen: '(',
-	TokType.RParen: ')',
-	TokType.SemiCol: ';',
+	T.LBrace: '{',
+	T.RBrace: '}',
+	T.LParen: '(',
+	T.RParen: ')',
+	T.Comma: ',',
+	T.SemiCol: ';',
+];
+immutable string[] resKeywords = [
+	T.Module: "module",
+	T.Import: "import",
+	T.Return: "return",
+	T.tVoid: "void",
+	T.i32: "int",
+	T.i64: "long",
 ];
 
 struct Tokenizer {
@@ -30,36 +32,45 @@ struct Tokenizer {
 		loop: while(++length)
 		{
 			string buf = code[cursor..cursor+length];
+			int a = 3;
+			a = 3+2;
 			// Reserved keywords
-			if(buf == "void") {
-				token = Token(TokType.Type);
-				break loop;
+			switch(buf) {
+				enum minElement = Token.Module;
+				static foreach(i0, keyword; resKeywords[minElement..$]) {
+					case keyword: {
+						token = cast(Token)(i0+minElement);
+					} break loop;
+				}
+				default: break;
 			}
+
+			char lastChar = buf[$-1];
 			// Reserved symbols
-			switch(buf[$-1]) {
-				enum minElement = TokType.LBrace;
+			switch(lastChar) {
+				enum minElement = Token.LBrace;
 				static foreach(i0, symbol; resSymbols[minElement..$]) {
 					case symbol: {
 						if(length > 1) {
 							length--;
-							token = Token(TokType.Ident, TokenVal(identifier: buf[0..$-1]));
+							token = Token.Ident;
 							break loop;
 						}
-						token = Token(cast(TokType)(i0+minElement));
+						token = Token(cast(Token)(i0+minElement));
 					} break loop;
 				}
 				case 0: {
-					token = Token(TokType.EOF);
+					token = Token(Token.EOF);
 				} break loop;
 				default: break;
 			}
-			if(buf[length-1] == ' ') {
+			if(lastChar == ' ' || lastChar == '\n') {
 				if(length == 1) {
 					cursor++;
 					length--;
 					continue;
 				}
-				token = Token(TokType.Ident, TokenVal(identifier: buf));
+				token = Token.Ident;
 				break loop;
 			}
 		}

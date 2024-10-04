@@ -8,7 +8,7 @@ import sdc.parsetable : ParseTable, makePTable, Action, ActionType, Prod;
 union NodeValue {
 	ulong num;
 	string ident;
-	TokType type;
+	Token type;
 	VarDecl varDecl;
 	FuncHeader funcHeader;
 }
@@ -47,8 +47,8 @@ List!ASTNode parse(string code)
 			case Shift: {
 				stack.add(action.state);
 
-				switch(token.type) {
-					default: value.type = token.type; break;
+				switch(token) {
+					default: value.type = token; break;
 					case T.Ident: value.ident = tok.curString; break;
 				}
 
@@ -64,13 +64,13 @@ List!ASTNode parse(string code)
 
 				switch(prod.nonTerm) {
 					case n.VarDecl: {
-						TokType type = astBuffer[$-1].value.type;
+						Token type = astBuffer[$-1].value.type;
 						string ident = value.ident;
 						astBuffer.pop(1);
 						value.varDecl = VarDecl(type, ident);
 					} break;
 					// case n.Args: {
-					// 	TokType type = astBuffer[$-2].value.type;
+					// 	Token type = astBuffer[$-2].value.type;
 					// 	string ident = value.ident;
 					// 	astBuffer.pop(2);
 					// 	value.varDecl = VarDecl(type, ident);
@@ -78,7 +78,7 @@ List!ASTNode parse(string code)
 					// case n.FuncHeader: {
 						
 					// 	VarDecl prefix = ;
-					// 	TokType type = astBuffer[$-2].value.type;
+					// 	Token type = astBuffer[$-2].value.type;
 					// 	string ident = value.ident;
 					// 	astBuffer.pop(2);
 					// 	value.varDecl = VarDecl(type, ident);
