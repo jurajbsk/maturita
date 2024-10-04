@@ -2,23 +2,27 @@ module sdc.parser;
 import lib.memory;
 import sdc.lexer;
 import sdc.grammar;
-import sdc.parsetable;
+import sdc.parsetable : ParseTable, makePTable, Action, ActionType, Prod;
+
 
 union NodeValue {
 	ulong num;
-	string text;
+	string ident;
+	TokType type;
+	VarDecl varDecl;
+	FuncHeader funcHeader;
 }
+
 struct ASTNode {
 	NonTerm nodeType;
 	NodeValue value;
-	p_size childLen;
 }
 
 enum ParseTable _ptable = makePTable(NonTerm.File);
-immutable ParseTable ptable = _ptable;
 
 List!ASTNode parse(string code)
 {
+	immutable ParseTable ptable = _ptable;
 	List!ASTNode astBuffer;
 	List!p_size stack;
 	stack.add(0);
@@ -34,10 +38,9 @@ List!ASTNode parse(string code)
 		p_size state = stack[$-1];
 		Action action = ptable.actionTable[state][token];
 
-		version(ParserDEBUG) {
+		debug {
 			import lib.io;
-			writeln(action);
-			writeln(cast(ulong)tok.current);
+			//writeln(token.type, " ", action);
 		}
 
 		with(ActionType)
@@ -45,17 +48,14 @@ List!ASTNode parse(string code)
 			case Shift: {
 				stack.add(action.state);
 
-				switch(tok.current) {
-					default: break;
-
-					case Token.Ident: {
-						value.text = tok.curString;
-					} break;
+				switch(token.type) {
+					default: value.type = token.type; break;
+					case T.Ident: value.ident = tok.curString; break;
 				}
 
-				if(!nullState) {
+				//if(!nullState) {
 					tok.next;
-				}
+				//}
 			} break;
 
 			case Reduce: {
@@ -63,7 +63,36 @@ List!ASTNode parse(string code)
 				stack.pop(prod.length);
 				stack.add(ptable.gotoTable[stack[$-1]][prod.nonTerm]);
 
-				astBuffer.add(ASTNode(prod.nonTerm, value, prod.length));
+				switch(prod.nonTerm) {
+					case n.VarDecl: {
+						TokType type = astBuffer[$-1].value.type;
+						string ident = value.ident;
+						astBuffer.pop(1);
+						value.varDecl = VarDecl(type, ident);
+					} break;
+					// case n.Args: {
+					// 	TokType type = astBuffer[$-2].value.type;
+					// 	string ident = value.ident;
+					// 	astBuffer.pop(2);
+					// 	value.varDecl = VarDecl(type, ident);
+					// } break;
+					// case n.FuncHeader: {
+						
+					// 	VarDecl prefix = ;
+					// 	TokType type = astBuffer[$-2].value.type;
+					// 	string ident = value.ident;
+					// 	astBuffer.pop(2);
+					// 	value.varDecl = VarDecl(type, ident);
+					// } break;
+					default: break;
+				}
+				astBuffer.add(ASTNode(prod.nonTerm, value));
+				value = NodeValue();
+				
+				debug {
+					import lib.io;
+					writeln(prod.nonTerm);
+				}
 
 				nullState = false;
 			} break;
@@ -76,7 +105,7 @@ List!ASTNode parse(string code)
 					goto actionSwitch;
 				}
 
-				assert(0);
+				assert(0, "Error");
 			}
 
 			case Accept: {
@@ -86,3 +115,5 @@ List!ASTNode parse(string code)
 	}
 	return astBuffer;
 }
+
+pragma(msg, NodeValue.sizeof);

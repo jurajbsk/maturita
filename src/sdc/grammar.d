@@ -81,38 +81,65 @@ enum TokType : ubyte {
 	i64,
 
 	Ident,
-	Number,
+	NumLiteral,
+
 	Null
 }
 enum NonTerm : ubyte {
 	File,
 
-	Stmnt,
 	StmntList,
-	ExprStmnt,
-	StmntType,
+	Stmnt,
+	//StmntType,
 
 	FuncDecl,
+	FuncHeader,
 	Args,
 
-	FuncInfo,
+	StmntBody,
+
+	ExprStmnt,
+	ReturnStmnt,
+
 	VarDecl,
+
+	Expr,
 	Type
 }
 alias l = Rule;
 alias T = TokType;
 alias n = NonTerm;
 enum Rule[] grammarTable = [
-	n.File: l(n.FuncDecl),
+	n.File: l(n.Args, T.RParen),
 
-	n.StmntList: l(n.Stmnt, n.StmntList) | l(null),
-	n.Stmnt: l(n.StmntType, T.LBrace, n.StmntList, T.RBrace) | l(n.ExprStmnt, T.SemiCol),
-	n.ExprStmnt: l(T.Return),
+	// n.Stmnt: l(n.StmntType, n.StmntBody) | l(n.ExprStmnt, T.SemiCol),
 
-	n.FuncDecl: l(n.FuncInfo, T.LBrace, /*n.StmntList,*/ T.RBrace),
-	n.Args: l(n.VarDecl) | l(n.VarDecl, T.Comma, n.Args) | l(null),
+	// n.FuncDecl: l(n.FuncHeader, n.StmntBody),
+	//n.FuncHeader: l(),
+	n.Args: l(n.Type) | l(n.Type, T.Comma, n.Args) | l(null),
 
-	n.FuncInfo: l(n.Type, T.Ident, T.LParen, n.Args, T.RParen),
-	n.VarDecl: l(n.Type, T.Ident),
+	// n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
+	// n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
+
+	// n.ExprStmnt: l(n.VarDecl) | l(n.ReturnStmnt),
+	// n.ReturnStmnt: l(T.Return) ,//| l(T.Return, n.Expr),
+
+	//n.VarDecl: l(n.Type, T.Ident),
+
+	// n.Expr: l(T.NumLiteral),
+
+
 	n.Type: l(T.tVoid) | l(T.i32) | l(T.i64)
 ];
+import sdc.parsetable;
+pragma(msg, canonCollection);
+
+struct VarDecl {
+	TokType type;
+	string ident;
+}
+struct FuncHeader {
+	TokType type;
+	string ident;
+	VarDecl[] args;
+}

@@ -6,21 +6,23 @@ import sdc.parser : ASTNode, NodeValue;
 import llvm;
 pragma(lib, "D:\\Software\\LLVM\\lib\\LLVM-C.lib");
 
-
+/*
 void codeGen(List!ASTNode ast) {
 	LLVMModuleRef mod = LLVMModuleCreateWithName("Module");
 
 	// Postorder tree traversal
-	size_t curParent;
-	List!p_size stack;
-	foreach_reverse(i, ASTNode node; ast) {
+	size_t curParent = 0;
+	List!size_t stack;
+	stack.add(ast[$-1].childLen);
+	foreach_reverse(i, ASTNode node; ast[0..$-1]) {
 		if(node.childLen > 0) {
 			stack.add(i);
-			curParent = i;
 		}
 		else {
-			
+			node.fun(mod);
+
 		}
+		stack[$-1]--;
 	}
 }
 
@@ -30,3 +32,4 @@ void fun(ASTNode node, LLVMModuleRef mod)
 		default: break;
 	}
 }
+*/

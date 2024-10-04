@@ -1,6 +1,5 @@
 module sdc.lexer;
 
-public import sdc.lexertypes;
 import sdc.grammar : TokType;
 
 immutable string[] resKeywords = [
