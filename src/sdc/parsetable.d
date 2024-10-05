@@ -126,26 +126,28 @@ Item[] closure(Item startItem)
 		for(uint i; i < result.length; i++)
 		{
 			Item cur = result[i];
+			if(cur.complete) {
+				continue;
+			}
 			Symbol[] prod = grammarTable[cur.nonTerm].def[cur.prodId];
-			foreach(Symbol sym; prod[cur.position..$])
-			{
-				if(sym.type != Symbol.Type.NonTerminal) {
-					continue;
-				}
-				foreach(k, Symbol[] symProd; grammarTable[sym.nont].def)
-				{
-					Item newItem = Item(sym.nont, cast(p_size)k);
 
-					bool exists;
-					foreach(Item item; result) {
-						if(newItem == item) {
-							exists = true;
-							break;
-						}
+			Symbol sym = prod[cur.position];
+			if(sym.type != Symbol.Type.NonTerminal) {
+				continue;
+			}
+			foreach(k, Symbol[] symProd; grammarTable[sym.nont].def)
+			{
+				Item newItem = Item(sym.nont, cast(p_size)k);
+
+				bool duplicate;
+				foreach(Item item; result) {
+					if(newItem == item) {
+						duplicate = true;
+						break;
 					}
-					if(!exists) {
-						result ~= newItem;
-					}
+				}
+				if(!duplicate) {
+					result ~= newItem;
 				}
 			}
 		}
