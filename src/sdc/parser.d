@@ -11,6 +11,7 @@ union NodeValue {
 	Token type;
 	VarDecl varDecl;
 	FuncHeader funcHeader;
+	p_size args;
 }
 
 struct ASTNode {
@@ -23,7 +24,11 @@ enum ParseTable _ptable = makePTable(NonTerm.File);
 List!ASTNode parse(string code)
 {
 	immutable ParseTable ptable = _ptable;
-	List!ASTNode astBuffer;
+
+	ASTNode[5] bufArr;
+	List!ASTNode astBuffer = List!ASTNode(bufArr);
+	List!VarDecl argBuffer;
+	
 	List!p_size stack;
 	stack.add(0);
 
@@ -52,9 +57,7 @@ List!ASTNode parse(string code)
 					case T.Ident: value.ident = tok.curString; break;
 				}
 
-				//if(!nullState) {
 					tok.next;
-				//}
 			} break;
 
 			case Reduce: {
@@ -62,40 +65,57 @@ List!ASTNode parse(string code)
 				stack.pop(prod.length);
 				stack.add(ptable.gotoTable[stack[$-1]][prod.nonTerm]);
 
+				NodeValue prevValue = value;
+				value = NodeValue();
+
 				switch(prod.nonTerm) {
 					case n.VarDecl: {
 						Token type = astBuffer[$-1].value.type;
-						string ident = value.ident;
+						string ident = prevValue.ident;
 						astBuffer.pop(1);
 						value.varDecl = VarDecl(type, ident);
 					} break;
-					// case n.Args: {
-					// 	Token type = astBuffer[$-2].value.type;
-					// 	string ident = value.ident;
-					// 	astBuffer.pop(2);
-					// 	value.varDecl = VarDecl(type, ident);
-					// } break;
-					// case n.FuncHeader: {
-						
-					// 	VarDecl prefix = ;
-					// 	Token type = astBuffer[$-2].value.type;
-					// 	string ident = value.ident;
-					// 	astBuffer.pop(2);
-					// 	value.varDecl = VarDecl(type, ident);
-					// } break;
+					case n.Args: {
+						p_size prevArgs;
+						bool prevIsArgs = astBuffer[$-1].nodeType == n.Args;
+						if(astBuffer.length < 2+prevIsArgs) {
+							break;
+						}
+						if(prevIsArgs) {
+							if(astBuffer.length < 3) {
+								break;
+							}
+							prevArgs = astBuffer.pop().value.args;
+						}
+						argBuffer.add(astBuffer.pop().value.varDecl);
+						value.args = prevArgs+1;
+					} break;
+					case n.FuncHeader: {
+						VarDecl decl = astBuffer[$-2].value.varDecl;
+						Token type = decl.type;
+						string ident = decl.ident;
+						p_size args = astBuffer[$-1].value.args;
+						astBuffer.pop(2);
+						value.funcHeader = FuncHeader(type, ident, argBuffer[$-args..$]);
+					} break;
 					default: break;
 				}
 				astBuffer.add(ASTNode(prod.nonTerm, value));
 
 				debug {
 					import lib.io;
-					writeln(prod.nonTerm, " ", value);
+					write(prod.nonTerm, " ");//, value);
+					// foreach(cur; astBuffer) {
+					// 	write(cur.nodeType, ",");
+					// }
+					// writeln();
+					// writeln(astBuffer._array);
 				}
 				value = NodeValue();
 			} break;
 
 			case Error: {
-				assert(0, "Error");
+				assert(0, "Parsing error");
 			}
 
 			case Accept: {

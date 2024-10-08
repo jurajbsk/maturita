@@ -108,27 +108,28 @@ alias l = Rule;
 alias T = Token;
 alias n = NonTerm;
 enum Rule[] grammarTable = [
-	n.File: l(n.Args, T.RParen),
+	n.File: l(n.FuncDecl),
 
-	// n.Stmnt: l(n.StmntType, n.StmntBody) | l(n.ExprStmnt, T.SemiCol),
+	n.FuncDecl: l(n.FuncHeader, n.StmntBody),
+	n.FuncHeader: l(n.VarDecl, T.LParen, n.Args, T.RParen),
+	n.Args: l(n.VarDecl) | l(n.Args, T.Comma, n.VarDecl) | l(null),
 
-	// n.FuncDecl: l(n.FuncHeader, n.StmntBody),
-	//n.FuncHeader: l(),
-	n.Args: l(n.Type) | l(n.Type, T.Comma, n.Args) | l(null),
+	n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
+	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
+	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
-	// n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
-	// n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
+	n.ExprStmnt: l(n.VarDecl) | l(n.ReturnStmnt),
+	n.ReturnStmnt: l(T.Return) ,//| l(T.Return, n.Expr),
 
-	// n.ExprStmnt: l(n.VarDecl) | l(n.ReturnStmnt),
-	// n.ReturnStmnt: l(T.Return) ,//| l(T.Return, n.Expr),
-
-	//n.VarDecl: l(n.Type, T.Ident),
+	n.VarDecl: l(n.Type, T.Ident),
 
 	// n.Expr: l(T.NumLiteral),
 
 
 	n.Type: l(T.tVoid) | l(T.i32) | l(T.i64)
 ];
+import sdc.parsetable;
+pragma(msg, Item(n.File,0,0).closure);
 
 struct VarDecl {
 	Token type;
