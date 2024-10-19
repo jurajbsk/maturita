@@ -1,6 +1,7 @@
 module sdc.lexer;
-import sdc.grammar : Token, T;
+import sdc.grammar : Token;
 
+alias T = Token;
 immutable char[] resSymbols = [
 	T.LBrace: '{',
 	T.RBrace: '}',

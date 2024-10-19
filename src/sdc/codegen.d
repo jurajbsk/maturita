@@ -1,7 +1,7 @@
 module sdc.codegen;
 import lib.memory;
 import sdc.grammar : NonTerm, p_size;
-import sdc.parser : ASTNode, NodeValue;
+import sdc.parser;
 
 import llvm;
 pragma(lib, "D:\\Software\\LLVM\\lib\\LLVM-C.lib");
@@ -24,12 +24,13 @@ void codeGen(List!ASTNode ast) {
 		}
 		stack[$-1]--;
 	}
+}*/
+
+struct CodeGenInfo {
+	LLVMModuleRef mod;
 }
 
-void fun(ASTNode node, LLVMModuleRef mod)
+void fun(ref LLVMModuleRef mod)
 {
-	switch(node.nodeType) {
-		default: break;
-	}
+	
 }
-*/

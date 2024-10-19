@@ -1,63 +1,51 @@
 module sdc.parser;
 import lib.memory;
-import sdc.lexer;
+import sdc.lexer : Tokenizer;
 import sdc.grammar;
 import sdc.parsetable : ParseTable, makePTable, Action, ActionType, Prod;
 
-
-union NodeValue {
-	ulong num;
-	string ident;
-	Token type;
-	VarDecl varDecl;
-	FuncHeader funcHeader;
-	p_size args;
-}
-
-struct ASTNode {
-	NonTerm nodeType;
-	NodeValue value;
-}
+alias T = Token;
+alias n = NonTerm;
 
 enum ParseTable _ptable = makePTable(NonTerm.File);
 
-List!ASTNode parse(string code)
+void parse(string code)
 {
 	immutable ParseTable ptable = _ptable;
 
-	ASTNode[5] bufArr;
-	List!ASTNode astBuffer = List!ASTNode(bufArr);
+	List!ubyte dataStack;
 	List!VarDecl argBuffer;
 	
 	List!p_size stack;
-	stack.add(0);
+	stack.add(0); // start state
 
 	Tokenizer tok = Tokenizer(code);
 	tok.next;
 
-	NodeValue value;
 	loop: while(true)
 	{
 		Token token = tok.current;
 		p_size state = stack[$-1];
 		Action action = ptable.actionTable[state][token];
 
-		debug {
-			import lib.io;
-			//writeln(token.type, " ", action);
-		}
-
 		with(ActionType)
 		final switch(action.type) {
 			case Shift: {
 				stack.add(action.state);
 
+				ubyte[] value;
 				switch(token) {
-					default: value.type = token; break;
-					case T.Ident: value.ident = tok.curString; break;
+					default: break;
+					case T.tVoid, T.i32, T.i64:
+						value = cast(ubyte[])(&token)[0..1];
+					break;
+					case T.Ident:
+						string curString = tok.curString;
+						value = cast(ubyte[])(&curString)[0..1];
+					break;
 				}
-
-					tok.next;
+				dataStack.add(value);
+				tok.next;
 			} break;
 
 			case Reduce: {
@@ -65,53 +53,41 @@ List!ASTNode parse(string code)
 				stack.pop(prod.length);
 				stack.add(ptable.gotoTable[stack[$-1]][prod.nonTerm]);
 
-				NodeValue prevValue = value;
-				value = NodeValue();
-
 				switch(prod.nonTerm) {
-					case n.VarDecl: {
-						Token type = astBuffer[$-1].value.type;
-						string ident = prevValue.ident;
-						astBuffer.pop(1);
-						value.varDecl = VarDecl(type, ident);
-					} break;
 					case n.Args: {
-						p_size prevArgs;
-						bool prevIsArgs = astBuffer[$-1].nodeType == n.Args;
-						if(astBuffer.length < 2+prevIsArgs) {
-							break;
+						bool prevIsArgs;
+						switch(prod.length) {
+							case 3: {
+								prevIsArgs = true;
+							} goto case 1;
+							case 1: {
+								VarDecl var = *cast(VarDecl*)&dataStack[$-VarDecl.sizeof];
+								argBuffer.add(var);
+								dataStack.pop(VarDecl.sizeof);
+								ubyte args;
+								if(prevIsArgs) {
+									args = dataStack.pop();
+								}
+								dataStack.add(cast(ubyte)(args+1));
+							} break;
+							default: break;
 						}
-						if(prevIsArgs) {
-							if(astBuffer.length < 3) {
-								break;
-							}
-							prevArgs = astBuffer.pop().value.args;
-						}
-						argBuffer.add(astBuffer.pop().value.varDecl);
-						value.args = prevArgs+1;
-					} break;
-					case n.FuncHeader: {
-						VarDecl decl = astBuffer[$-2].value.varDecl;
-						Token type = decl.type;
-						string ident = decl.ident;
-						p_size args = astBuffer[$-1].value.args;
-						astBuffer.pop(2);
-						value.funcHeader = FuncHeader(type, ident, argBuffer[$-args..$]);
 					} break;
 					default: break;
 				}
-				astBuffer.add(ASTNode(prod.nonTerm, value));
 
 				debug {
 					import lib.io;
-					write(prod.nonTerm, " ");//, value);
-					// foreach(cur; astBuffer) {
-					// 	write(cur.nodeType, ",");
-					// }
-					// writeln();
-					// writeln(astBuffer._array);
+					switch(prod.nonTerm) {
+						default: break;
+						case n.Type: {
+							writeln(*cast(Token*)&dataStack[$-Token.sizeof]);
+						} break;
+						case n.VarDecl: {
+							writeln(*cast(VarDecl*)&dataStack[$-VarDecl.sizeof]);
+						} break;
+					}
 				}
-				value = NodeValue();
 			} break;
 
 			case Error: {
@@ -123,7 +99,4 @@ List!ASTNode parse(string code)
 			}
 		}
 	}
-	return astBuffer;
 }
-
-pragma(msg, NodeValue.sizeof);

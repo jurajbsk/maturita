@@ -25,8 +25,8 @@ extern(C) int main(int argc, char** args)
 		}
 	} */
 
-	List!ASTNode ast = parse("void fun() {}\0");
-	codeGen(ast);
+	parse("void fun(int a, int b) {return ;}\0");
+	//codeGen(ast);
 	
 	return 0;
 }

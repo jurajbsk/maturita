@@ -104,9 +104,20 @@ enum NonTerm : ubyte {
 	Expr,
 	Type
 }
-alias l = Rule;
-alias T = Token;
-alias n = NonTerm;
+private {
+	alias l = Rule;
+	alias T = Token;
+	alias n = NonTerm;
+	Rule TokenList(Token[] tokens) {
+		if(__ctfe) {
+			Rule res;
+			foreach(Token tok; tokens) {
+				res.def ~= [Symbol(tok)];
+			}
+			return res;
+		} assert(0);
+	}
+}
 enum Rule[] grammarTable = [
 	n.File: l(n.FuncDecl),
 
@@ -119,24 +130,23 @@ enum Rule[] grammarTable = [
 	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
 	n.ExprStmnt: l(n.VarDecl) | l(n.ReturnStmnt),
-	n.ReturnStmnt: l(T.Return) ,//| l(T.Return, n.Expr),
+	n.ReturnStmnt: l(T.Return),//| l(T.Return, n.Expr),
 
 	n.VarDecl: l(n.Type, T.Ident),
 
 	// n.Expr: l(T.NumLiteral),
 
-
-	n.Type: l(T.tVoid) | l(T.i32) | l(T.i64)
+	n.Type: TokenList([T.tVoid, T.i32, T.i64])
 ];
-import sdc.parsetable;
-pragma(msg, Item(n.File,0,0).closure);
 
 struct VarDecl {
+	align(1):
 	Token type;
 	string ident;
 }
 struct FuncHeader {
+	align(1):
 	Token type;
 	string ident;
-	VarDecl[] args;
+	ubyte args;
 }
