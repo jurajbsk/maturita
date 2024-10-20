@@ -2,13 +2,13 @@ module sdc.lexer;
 import sdc.grammar : Token;
 
 alias T = Token;
-immutable char[] resSymbols = [
-	T.LBrace: '{',
-	T.RBrace: '}',
-	T.LParen: '(',
-	T.RParen: ')',
-	T.Comma: ',',
-	T.SemiCol: ';',
+immutable Token[char.max] resSymbols = [
+	'{': T.LBrace,
+	'}': T.RBrace,
+	'(': T.LParen,
+	')': T.RParen,
+	',': T.Comma,
+	';': T.SemiCol,
 ];
 immutable string[] resKeywords = [
 	T.Module: "module",
@@ -32,10 +32,28 @@ struct Tokenizer {
 		length = 0;
 		loop: while(++length)
 		{
-			string buf = code[cursor..cursor+length];
-			int a = 3;
-			a = 3+2;
+			char lastChar = code[cursor+length-1];
+			bool isWhitespace = lastChar == ' ' || lastChar == '\n';
+
+			// Reserved symbols
+			token = resSymbols[lastChar];
+			bool isSymbol = token != 0 || lastChar == '\0';
+			if(!isSymbol && !isWhitespace) {
+				continue;
+			}
+			else if(length == 1) {
+				if(isSymbol) {
+					break;
+				}
+				cursor++;
+				length--;
+				continue;
+			}
+			length--;
+			token = T.Ident;
+
 			// Reserved keywords
+			string buf = code[cursor..cursor+length];
 			switch(buf) {
 				enum minElement = Token.Module;
 				static foreach(i0, keyword; resKeywords[minElement..$]) {
@@ -45,35 +63,7 @@ struct Tokenizer {
 				}
 				default: break;
 			}
-
-			char lastChar = buf[$-1];
-			// Reserved symbols
-			switch(lastChar) {
-				enum minElement = Token.LBrace;
-				static foreach(i0, symbol; resSymbols[minElement..$]) {
-					case symbol: {
-						if(length > 1) {
-							length--;
-							token = Token.Ident;
-							break loop;
-						}
-						token = Token(cast(Token)(i0+minElement));
-					} break loop;
-				}
-				case 0: {
-					token = Token(Token.EOF);
-				} break loop;
-				default: break;
-			}
-			if(lastChar == ' ' || lastChar == '\n') {
-				if(length == 1) {
-					cursor++;
-					length--;
-					continue;
-				}
-				token = Token.Ident;
-				break loop;
-			}
+			break;
 		}
 		cursor += length;
 		current = token;
