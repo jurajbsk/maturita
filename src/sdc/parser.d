@@ -27,6 +27,7 @@ void parse(string code)
 		Token token = tok.current;
 		p_size state = stack[$-1];
 		Action action = ptable.actionTable[state][token];
+		ushort counter;
 
 		with(ActionType)
 		final switch(action.type) {
@@ -54,24 +55,20 @@ void parse(string code)
 				stack.add(ptable.gotoTable[stack[$-1]][prod.nonTerm]);
 
 				switch(prod.nonTerm) {
-					case n.Args: {
-						bool prevIsArgs;
-						switch(prod.length) {
-							case 3: {
-								prevIsArgs = true;
-							} goto case 1;
-							case 1: {
-								VarDecl var = *cast(VarDecl*)&dataStack[$-VarDecl.sizeof];
-								argBuffer.add(var);
-								dataStack.pop(VarDecl.sizeof);
-								ubyte args;
-								if(prevIsArgs) {
-									args = dataStack.pop();
-								}
-								dataStack.add(cast(ubyte)(args+1));
-							} break;
-							default: break;
+					case n.Args, n.ArgsHead: {
+						if(prod.length < 2) {
+							counter = 0;
+							break;
 						}
+						VarDecl var = *cast(VarDecl*)&dataStack[$-VarDecl.sizeof];
+						argBuffer.add(var);
+						dataStack.pop(VarDecl.sizeof);
+						ubyte args;
+						if(counter) {
+							args = dataStack.pop();
+						}
+						counter++;
+						dataStack.add(cast(ubyte)(args+1));
 					} break;
 					default: break;
 				}

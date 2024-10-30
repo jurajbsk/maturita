@@ -51,11 +51,15 @@ struct Tokenizer {
 			}
 			length--;
 			token = T.Ident;
-
-			// Reserved keywords
 			string buf = code[cursor..cursor+length];
-			switch(buf) {
-				enum minElement = Token.Module;
+
+			// Number literals
+			if(buf[0] <= '9' && buf[0] >= '0') {
+				token = T.NumLiteral;
+			}
+			// Reserved keywords
+			else switch(buf) {
+				enum minElement = T.Module;
 				static foreach(i0, keyword; resKeywords[minElement..$]) {
 					case keyword: {
 						token = cast(Token)(i0+minElement);

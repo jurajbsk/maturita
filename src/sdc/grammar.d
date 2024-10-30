@@ -69,8 +69,7 @@ enum Token : ubyte {
 	RParen,
 	Comma,
 	SemiCol,
-
-	Assign,
+	Equals,
 
 	Module,
 	Import,
@@ -92,51 +91,50 @@ enum NonTerm : ubyte {
 
 	FuncDecl,
 	FuncHeader,
+	ArgsHead,
 	Args,
 
 	StmntBody,
 
+	Expr,
 	ExprStmnt,
 	ReturnStmnt,
 
 	VarDecl,
-
-	Expr,
-	Type
+	Type,
 }
 private {
 	alias l = Rule;
 	alias T = Token;
 	alias n = NonTerm;
-	Rule TokenList(Token[] tokens) {
+	Rule Any(S...)(S elements) {
 		if(__ctfe) {
 			Rule res;
-			foreach(Token tok; tokens) {
-				res.def ~= [Symbol(tok)];
+			foreach(Symbol sym; elements) {
+				res.def ~= [sym];
 			}
 			return res;
 		} assert(0);
 	}
 }
-enum Rule[] grammarTable = [
+enum Rule[NonTerm.max+1] grammarTable = [
 	n.File: l(n.FuncDecl),
 
 	n.FuncDecl: l(n.FuncHeader, n.StmntBody),
-	n.FuncHeader: l(n.VarDecl, T.LParen, n.Args, T.RParen),
-	n.Args: l(n.VarDecl) | l(n.Args, T.Comma, n.VarDecl) | l(null),
+	n.FuncHeader: l(n.VarDecl, T.LParen, n.ArgsHead, T.RParen),
+	n.ArgsHead: l(n.Args) | l(n.Args, n.VarDecl),
+	n.Args: l(n.Args, n.VarDecl, T.Comma) | l(null),
 
 	n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
 	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
-	n.ExprStmnt: l(n.VarDecl) | l(n.ReturnStmnt),
 	n.ReturnStmnt: l(T.Return),//| l(T.Return, n.Expr),
+	n.ExprStmnt: Any(n.VarDecl, n.ReturnStmnt),
 
 	n.VarDecl: l(n.Type, T.Ident),
 
-	// n.Expr: l(T.NumLiteral),
-
-	n.Type: TokenList([T.tVoid, T.i32, T.i64])
+	n.Type: Any(T.tVoid, T.i32, T.i64)
 ];
 
 struct VarDecl {
