@@ -129,8 +129,9 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
 	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
-	n.ReturnStmnt: l(T.Return),//| l(T.Return, n.Expr),
 	n.ExprStmnt: Any(n.VarDecl, n.ReturnStmnt),
+	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
+	n.Expr: l(T.NumLiteral),
 
 	n.VarDecl: l(n.Type, T.Ident),
 

@@ -37,12 +37,17 @@ void parse(string code)
 				ubyte[] value;
 				switch(token) {
 					default: break;
-					case T.tVoid, T.i32, T.i64:
-						value = cast(ubyte[])(&token)[0..1];
-					break;
 					case T.Ident:
 						string curString = tok.curString;
 						value = cast(ubyte[])(&curString)[0..1];
+					break;
+					case T.tVoid, T.i32, T.i64:
+						value = cast(ubyte[])(&token)[0..1];
+					break;
+					case T.NumLiteral:
+						import lib.string;
+						ulong num = strToNum(tok.curString);
+						value = cast(ubyte[])(&num)[0..1];
 					break;
 				}
 				dataStack.add(value);
