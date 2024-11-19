@@ -25,7 +25,7 @@ extern(C) int main(int argc, char** args)
 		}
 	} */
 
-	parse("void fun(int a, int b) {return ;}\0");
+	parse("void fun(int a) {return 0;}\0");
 	//codeGen(ast);
 	
 	return 0;

@@ -145,7 +145,6 @@ struct VarDecl {
 }
 struct FuncHeader {
 	align(1):
-	Token type;
-	string ident;
+	VarDecl decl;
 	ubyte args;
 }

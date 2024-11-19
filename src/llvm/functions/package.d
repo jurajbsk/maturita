@@ -38,17 +38,22 @@ private nothrow auto orEmpty(T)(T v)
 //     mixin(LLVM_Disassemblers.map!(t => "LLVMInitialize" ~ t ~ "Disassembler();").joiner.array.orEmpty);
 // }
 
-// nothrow LLVMBool LLVMInitializeNativeTarget()
-// {
-//     static if (LLVM_NativeTarget != "") {
-//         mixin("LLVMInitialize" ~ LLVM_NativeTarget ~ "TargetInfo();");
-//         mixin("LLVMInitialize" ~ LLVM_NativeTarget ~ "Target();");
-//         mixin("LLVMInitialize" ~ LLVM_NativeTarget ~ "TargetMC();");
-//         return 0;
-//     } else {
-//         return 1;
-//     }
-// }
+extern(C) {
+	mixin("void LLVMInitialize" ~ LLVM_NativeTarget ~ "TargetInfo();");
+	mixin("void LLVMInitialize" ~ LLVM_NativeTarget ~ "Target();");
+	mixin("void LLVMInitialize" ~ LLVM_NativeTarget ~ "TargetMC();");
+}
+LLVMBool LLVMInitializeNativeTarget()
+{
+    static if (LLVM_NativeTarget != "") {
+        mixin("LLVMInitialize" ~ LLVM_NativeTarget ~ "TargetInfo();");
+        mixin("LLVMInitialize" ~ LLVM_NativeTarget ~ "Target();");
+        mixin("LLVMInitialize" ~ LLVM_NativeTarget ~ "TargetMC();");
+        return 0;
+    } else {
+        return 1;
+    }
+}
 
 static if (LLVM_Version >= asVersion(3, 4, 0))
 {
