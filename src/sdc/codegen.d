@@ -1,10 +1,8 @@
 module sdc.codegen;
 import lib.memory;
 import sdc.grammar;
-//import sdc.parser;
-
 import llvm;
-//pragma(lib, "D:\\Software\\LLVM\\lib\\LLVM-C.lib");
+
 alias T = Token;
 
 LLVMTypeRef mapType(Token type)
