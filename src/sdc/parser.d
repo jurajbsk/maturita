@@ -10,7 +10,7 @@ alias n = NonTerm;
 
 enum ParseTable _ptable = makePTable(NonTerm.File);
 
-void parse(string code)
+void parse(char* code)
 {
 	immutable ParseTable ptable = _ptable;
 

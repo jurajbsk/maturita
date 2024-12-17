@@ -20,7 +20,7 @@ immutable string[] resKeywords = [
 ];
 
 struct Tokenizer {
-	string code;
+	char* code;
 	uint cursor;
 	uint locs;
 	ushort length;
@@ -33,7 +33,7 @@ struct Tokenizer {
 		loop: while(++length)
 		{
 			char lastChar = code[cursor+length-1];
-			bool isWhitespace = lastChar == ' ' || lastChar == '\n';
+			bool isWhitespace = (lastChar <= '\r' && lastChar >= '\t') || lastChar == ' ';
 
 			// Reserved symbols
 			token = resSymbols[lastChar];
@@ -51,7 +51,7 @@ struct Tokenizer {
 			}
 			length--;
 			token = T.Ident;
-			string buf = code[cursor..cursor+length];
+			char[] buf = code[cursor..cursor+length];
 
 			// Number literals
 			if(buf[0] <= '9' && buf[0] >= '0') {
@@ -74,6 +74,6 @@ struct Tokenizer {
 		return token;
 	}
 	string curString() {
-		return code[cursor-length..cursor];
+		return cast(string)code[cursor-length..cursor];
 	}
 }
