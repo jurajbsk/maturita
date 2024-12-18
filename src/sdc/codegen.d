@@ -39,13 +39,16 @@ struct CodeGen {
 
 	void addFunc(VarDecl decl, VarDecl[] args)
 	{
-		size_t len = buffer.length;
 		foreach(arg; args) {
 			LLVMTypeRef llvmType = mapType(arg.type);
 			buffer.add(llvmType);
 		}
 		LLVMTypeRef retType = mapType(decl.type);
-		LLVMTypeRef funcType = LLVMFunctionType(retType, &buffer[len], cast(uint)args.length, false);
+		LLVMTypeRef* argTypes;
+		if(args.length) {
+			argTypes = &buffer[$-args.length];
+		}
+		LLVMTypeRef funcType = LLVMFunctionType(retType, argTypes, cast(uint)args.length, false);
 
 		char[255] name = decl.ident;
 		name[decl.ident.length] = 0;

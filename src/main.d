@@ -1,7 +1,6 @@
 import lib.io, lib.string, lib.memory;
 import sdc.grammar : NonTerm;
-import sdc.parser;
-import sdc.codegen;
+import sdc.compile;
 
 version(Windows) {
 	import lib.sys.windows.kernel32;
@@ -45,7 +44,7 @@ extern(C) int main(int argc, char** args)
 		import lib.time;
 		ulong time = getTicks();
 	}
-	parse(sourceCode);
+	compile(sourceCode);
 	debug {
 		writeln("Seconds elapsed: ", cast(ulong)(elapsed(time)*1000), "ms");
 	}
