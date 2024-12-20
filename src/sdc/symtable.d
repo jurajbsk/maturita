@@ -1,10 +1,11 @@
-module src.sdc.symtable;
+module sdc.symtable;
 import lib.memory;
-import sdc.grammar : Token;
+import sdc.grammar : Token, VarDecl;
 
 struct SymbolData {
 	string name;
 	Token type;
+	VarDecl[] args;
 }
 
 struct SymbolTable {

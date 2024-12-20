@@ -2,8 +2,9 @@ module sdc.compile;
 import lib.memory;
 import sdc.grammar;
 import sdc.parsetable : Action, ActionType, Prod;
-import sdc.codegen : CodeGen;
 import sdc.parser;
+import sdc.symtable;
+import sdc.codegen : CodeGen;
 
 alias T = Token;
 alias n = NonTerm;
@@ -13,9 +14,12 @@ void compile(char* code)
 	List!ubyte dataStack;
 	List!VarDecl argBuffer;
 	Parser parser = Parser(code);
+	SymbolTable symTable;
 	CodeGen gen;
 	gen.initialize();
+
 	ushort argCounter;
+	FuncHeader curFunc;
 
 	loop: while(true) {
 		Action action = parser.next();
@@ -66,14 +70,18 @@ void compile(char* code)
 						dataStack.add(cast(ubyte)(args+1));
 					} break;
 					case n.FuncHeader: {
-						import lib.io;
 						if(dataStack.length < FuncHeader.sizeof) {
 							dataStack.add(0);
 						}
 						FuncHeader fh = *cast(FuncHeader*)&dataStack[$-FuncHeader.sizeof];
 						dataStack.pop(FuncHeader.sizeof);
+						if(symTable.search(fh.decl.ident)) {
+							assert(0, "Duplicate name");
+						}
+
 						VarDecl[] args = argBuffer[$-fh.args..$];
-						writeln(args.length);
+						SymbolData symData = SymbolData(fh.decl.ident, fh.decl.type, args);
+						symTable.add(symData);
 						gen.addFunc(fh.decl, args);
 					} break;
 					case n.ReturnStmnt: {
