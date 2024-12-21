@@ -4,6 +4,7 @@ import sdc.grammar;
 import sdc.parsetable : Action, ActionType, Prod;
 import sdc.parser;
 import sdc.symtable;
+import sdc.semantic;
 import sdc.codegen : CodeGen;
 
 alias T = Token;
@@ -11,15 +12,15 @@ alias n = NonTerm;
 
 void compile(char* code)
 {
+	Parser parser = Parser(code);
 	List!ubyte dataStack;
 	List!VarDecl argBuffer;
-	Parser parser = Parser(code);
 	SymbolTable symTable;
 	CodeGen gen;
 	gen.initialize();
 
+	Semantic semant;
 	ushort argCounter;
-	FuncHeader curFunc;
 
 	loop: while(true) {
 		Action action = parser.next();
@@ -40,8 +41,26 @@ void compile(char* code)
 					break;
 					case T.NumLiteral:
 						import lib.string;
-						ulong num = strToNum(curStr);
-						value = cast(ubyte[])(&num)[0..1];
+						StrNum num = strToNum(curStr);
+						Expression expr;
+						final switch(num.sign) {
+							case 0: {
+								if(num <= uint.max) {
+									expr.type = T.i32;
+								}
+								else {
+									expr.type = T.i64;
+								}
+							} break;
+							case 1: {
+								if(num <= byte.max) {
+
+								}
+							} break;
+							case 2: assert(0, "Error: Number overflows - too large");
+							case -1: assert(0, "Corrupt NumLiteral");
+						}
+						value = cast(ubyte[])(&expr)[0..1];
 					break;
 				}
 				dataStack.add(value);
@@ -80,6 +99,7 @@ void compile(char* code)
 						}
 
 						VarDecl[] args = argBuffer[$-fh.args..$];
+						semant.lastFunc = fh;
 						SymbolData symData = SymbolData(fh.decl.ident, fh.decl.type, args);
 						symTable.add(symData);
 						gen.addFunc(fh.decl, args);
@@ -87,12 +107,14 @@ void compile(char* code)
 					case n.ReturnStmnt: {
 						switch(prod.length) {
 							case 1: {
+								semant.checkRet(T.tVoid);
 								gen.addRetVoid();
 							} break;
 							case 2: {
-								ulong num = *cast(ulong*)&dataStack[$-ulong.sizeof];
-								dataStack.pop(ulong.sizeof);
-								gen.addRet(cast(uint)num);
+								Expression expr = *cast(Expression*)&dataStack[$-Expression.sizeof];
+								dataStack.pop(Expression.sizeof);
+								semant.checkRet(expr.type);
+								gen.addRet(cast(uint)expr.num);
 							} break;
 							default: assert(0);
 						}

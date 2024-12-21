@@ -150,3 +150,10 @@ struct FuncHeader {
 	VarDecl decl;
 	ubyte args;
 }
+struct Expression {
+	align(1):
+	union {
+		ulong num;
+	}
+	Token type;
+}
