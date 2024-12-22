@@ -99,9 +99,10 @@ enum NonTerm : ubyte {
 
 	Expr,
 	ExprStmnt,
+	VarDecl,
 	ReturnStmnt,
 
-	VarDecl,
+	Variable,
 	Type,
 }
 private {
@@ -123,31 +124,32 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.TopList: l(n.FuncDecl) | l(n.TopList, n.FuncDecl),
 
 	n.FuncDecl: l(n.FuncHeader, n.StmntBody),
-	n.FuncHeader: l(n.VarDecl, T.LParen, n.ArgsHead, T.RParen),
-	n.ArgsHead: l(n.Args) | l(n.Args, n.VarDecl),
-	n.Args: l(n.Args, n.VarDecl, T.Comma) | l(null),
+	n.FuncHeader: l(n.Variable, T.LParen, n.ArgsHead, T.RParen),
+	n.ArgsHead: l(n.Args) | l(n.Args, n.Variable),
+	n.Args: l(n.Args, n.Variable, T.Comma) | l(null),
 
 	n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
-	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
+	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt),
 
-	n.ExprStmnt: Any(n.VarDecl, n.ReturnStmnt),
-	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
 	n.Expr: l(T.NumLiteral),
+	n.ExprStmnt: Any(n.ReturnStmnt, n.VarDecl),
+	n.VarDecl: l(n.Variable, T.SemiCol),
+	n.ReturnStmnt: l(T.Return, T.SemiCol) | l(T.Return, n.Expr, T.SemiCol),
 
-	n.VarDecl: l(n.Type, T.Ident) | l(n.Type, T.Ident, T.Asign, n.Expr),
+	n.Variable: l(n.Type, T.Ident) | l(n.Type, T.Ident, T.Asign, n.Expr),
 
 	n.Type: Any(T.tVoid, T.i32, T.i64)
 ];
 
-struct VarDecl {
+struct Variable {
 	align(1):
 	Token type;
 	string ident;
 }
 struct FuncHeader {
 	align(1):
-	VarDecl decl;
+	Variable decl;
 	ubyte args;
 }
 struct Expression {

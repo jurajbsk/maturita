@@ -37,7 +37,7 @@ struct CodeGen {
 		LLVMInitializeNativeTarget();
 	}
 
-	void addFunc(VarDecl decl, VarDecl[] args)
+	void addFunc(Variable decl, Variable[] args)
 	{
 		foreach(arg; args) {
 			LLVMTypeRef llvmType = mapType(arg.type);
@@ -62,7 +62,6 @@ struct CodeGen {
 		LLVMBasicBlockRef entryBlock = LLVMAppendBasicBlockInContext(context, func, "");
         LLVMPositionBuilderAtEnd(builder, entryBlock);
 	}
-
 	void addRet(uint num) {
 		LLVMTypeRef type = LLVMInt32Type();
 		LLVMValueRef val = LLVMConstInt(type, num, 0);
@@ -70,6 +69,22 @@ struct CodeGen {
 	}
 	void addRetVoid() {
 		LLVMBuildRetVoid(builder);
+	}
+	void* addVar(Variable var) {
+		LLVMBasicBlockRef origBlock = LLVMGetInsertBlock(builder);
+		LLVMValueRef curFunc = LLVMGetBasicBlockParent(origBlock);
+		LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(curFunc);
+		LLVMValueRef firstInstr = LLVMGetFirstInstruction(entryBlock);
+		if(firstInstr) {
+			LLVMPositionBuilderBefore(builder, firstInstr);
+		}
+
+		LLVMTypeRef type = mapType(var.type);
+		char[255] name = var.ident;
+		name[var.ident.length] = 0;
+		LLVMValueRef alloca = LLVMBuildAlloca(builder, type, name.ptr);
+		LLVMPositionBuilderAtEnd(builder, origBlock);
+		return alloca;
 	}
 
 	void dumpIR(string fileName) {

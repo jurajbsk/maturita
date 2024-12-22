@@ -14,7 +14,7 @@ void compile(char* code)
 {
 	Parser parser = Parser(code);
 	List!ubyte dataStack;
-	List!VarDecl argBuffer;
+	List!Variable argBuffer;
 	SymbolTable symTable;
 	CodeGen gen;
 	gen.initialize();
@@ -78,8 +78,8 @@ void compile(char* code)
 							argCounter = 0;
 							break;
 						}
-						VarDecl var = *cast(VarDecl*)&dataStack[$-VarDecl.sizeof];
-						dataStack.pop(VarDecl.sizeof);
+						Variable var = *cast(Variable*)&dataStack[$-Variable.sizeof];
+						dataStack.pop(Variable.sizeof);
 						argBuffer.add(var);
 						ubyte args;
 						if(argCounter) {
@@ -88,7 +88,8 @@ void compile(char* code)
 						argCounter++;
 						dataStack.add(cast(ubyte)(args+1));
 					} break;
-					case n.FuncHeader: {
+					case n.FuncHeader:
+					{
 						if(dataStack.length < FuncHeader.sizeof) {
 							dataStack.add(0);
 						}
@@ -98,19 +99,30 @@ void compile(char* code)
 							assert(0, "Duplicate name");
 						}
 
-						VarDecl[] args = argBuffer[$-fh.args..$];
+						Variable[] args = argBuffer[$-fh.args..$];
 						semant.lastFunc = fh;
 						SymbolData symData = SymbolData(fh.decl.ident, fh.decl.type, args);
 						symTable.add(symData);
 						gen.addFunc(fh.decl, args);
 					} break;
-					case n.ReturnStmnt: {
+					case n.VarDecl: {
+						Variable var = *cast(Variable*)&dataStack[$-Variable.sizeof];
+						dataStack.pop(Variable.sizeof);
+						if(symTable.search(var.ident)) {
+							assert(0, "Error: Declaration shadows previous symbol");
+						}
+						gen.addVar(var);
+						SymbolData data = SymbolData(var.ident, var.type);
+						symTable.add(data);
+					} break;
+					case n.ReturnStmnt:
+					{
 						switch(prod.length) {
-							case 1: {
+							case 2: {
 								semant.checkRet(T.tVoid);
 								gen.addRetVoid();
 							} break;
-							case 2: {
+							case 3: {
 								Expression expr = *cast(Expression*)&dataStack[$-Expression.sizeof];
 								dataStack.pop(Expression.sizeof);
 								semant.checkRet(expr.type);
@@ -129,8 +141,8 @@ void compile(char* code)
 						case n.Type: {
 							writeln(*cast(Token*)&dataStack[$-Token.sizeof]);
 						} break;
-						case n.VarDecl: {
-							writeln(*cast(VarDecl*)&dataStack[$-VarDecl.sizeof]);
+						case n.Variable: {
+							writeln(*cast(Variable*)&dataStack[$-Variable.sizeof]);
 						} break;
 						case n.Args: {
 							writeln(argBuffer._array);
@@ -144,7 +156,7 @@ void compile(char* code)
 
 			case Error: {
 				import lib.io;
-				write("Expected: ");
+				write("Line ", parser.tokenizer.locs, ", Expected: ");
 				p_size[1] startState = [action.state];
 				List!p_size stateList = startState;
 				for(ubyte i; i < stateList.length; i++) {

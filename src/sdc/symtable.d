@@ -1,21 +1,22 @@
 module sdc.symtable;
 import lib.memory;
-import sdc.grammar : Token, VarDecl;
+import sdc.grammar : Token, Variable;
 
 struct SymbolData {
 	string name;
 	Token type;
-	VarDecl[] args;
+	Variable[] args;
 }
 
 struct SymbolTable {
 	List!SymbolData table;
 	uint scopeLen;
 
-	void add(SymbolData data)
+	SymbolData* add(SymbolData data)
 	{
 		table.add(data);
 		scopeLen++;
+		return &table[$-1];
 	}
 	SymbolData* search(string name)
 	{

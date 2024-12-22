@@ -22,7 +22,7 @@ immutable string[] resKeywords = [
 struct Tokenizer {
 	char* code;
 	uint cursor;
-	uint locs;
+	uint locs = 1;
 	ushort length;
 
 	Token current;
@@ -44,6 +44,9 @@ struct Tokenizer {
 			else if(length == 1) {
 				if(isSymbol) {
 					break;
+				}
+				else if(lastChar == '\n') {
+					locs++;
 				}
 				cursor++;
 				length--;
