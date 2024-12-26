@@ -3,7 +3,7 @@ import lib.memory;
 import sdc.grammar;
 import llvm;
 
-alias T = Token;
+private alias T = Token;
 
 LLVMTypeRef mapType(Token type)
 {
@@ -37,7 +37,12 @@ struct CodeGen {
 		LLVMInitializeNativeTarget();
 	}
 
-	void addFunc(Variable decl, Variable[] args)
+	void* toValue(ulong num, Token numType)
+	{
+		LLVMTypeRef type = mapType(numType);
+		return LLVMConstInt(type, num, false);
+	}
+	void* addFunc(Variable decl, Variable[] args)
 	{
 		foreach(arg; args) {
 			LLVMTypeRef llvmType = mapType(arg.type);
@@ -61,16 +66,18 @@ struct CodeGen {
 
 		LLVMBasicBlockRef entryBlock = LLVMAppendBasicBlockInContext(context, func, "");
         LLVMPositionBuilderAtEnd(builder, entryBlock);
+		return func;
 	}
-	void addRet(uint num) {
-		LLVMTypeRef type = LLVMInt32Type();
-		LLVMValueRef val = LLVMConstInt(type, num, 0);
-		LLVMBuildRet(builder, val);
+	void addRet(void* value)
+	{
+		LLVMBuildRet(builder, cast(LLVMValueRef)value);
 	}
-	void addRetVoid() {
+	void addRetVoid()
+	{
 		LLVMBuildRetVoid(builder);
 	}
-	void* addVar(Variable var) {
+	void* addVar(Variable var)
+	{
 		LLVMBasicBlockRef origBlock = LLVMGetInsertBlock(builder);
 		LLVMValueRef curFunc = LLVMGetBasicBlockParent(origBlock);
 		LLVMBasicBlockRef entryBlock = LLVMGetEntryBasicBlock(curFunc);
@@ -85,6 +92,10 @@ struct CodeGen {
 		LLVMValueRef alloca = LLVMBuildAlloca(builder, type, name.ptr);
 		LLVMPositionBuilderAtEnd(builder, origBlock);
 		return alloca;
+	}
+	void* addAssign(void* value, void* var)
+	{
+		return LLVMBuildStore(builder, cast(LLVMValueRef)value, cast(LLVMValueRef)var);
 	}
 
 	void dumpIR(string fileName) {

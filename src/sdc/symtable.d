@@ -2,15 +2,19 @@ module sdc.symtable;
 import lib.memory;
 import sdc.grammar : Token, Variable;
 
-struct SymbolData {
-	string name;
-	Token type;
-	Variable[] args;
+union SymbolData {
+	struct {
+		string name;
+		void* valueRef;
+		Token type;
+		Variable[] args;
+	}
+	ulong scopeLen;
 }
 
 struct SymbolTable {
 	List!SymbolData table;
-	uint scopeLen;
+	ulong scopeLen;
 
 	SymbolData* add(SymbolData data)
 	{
@@ -31,7 +35,7 @@ struct SymbolTable {
 	}
 	void addScope()
 	{
-		SymbolData marker = SymbolData(null, cast(Token)scopeLen);
+		SymbolData marker = SymbolData(scopeLen: scopeLen);
 		table.add(marker);
 		scopeLen = 0;
 	}

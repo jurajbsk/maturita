@@ -69,7 +69,7 @@ enum Token : ubyte {
 	RParen,
 	Comma,
 	SemiCol,
-	Asign,
+	Assign,
 
 	Module,
 	Import,
@@ -86,21 +86,20 @@ enum NonTerm : ubyte {
 	File,
 	TopList,
 
-	StmntList,
-	Stmnt,
-	//StmntType,
-
 	FuncDecl,
 	FuncHeader,
 	ArgsHead,
 	Args,
 
 	StmntBody,
+	StmntList,
+	Stmnt,
 
 	Expr,
 	ExprStmnt,
 	VarDecl,
 	ReturnStmnt,
+	AssignStmnt,
 
 	Variable,
 	Type,
@@ -133,11 +132,13 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt),
 
 	n.Expr: l(T.NumLiteral),
-	n.ExprStmnt: Any(n.ReturnStmnt, n.VarDecl),
+	n.ExprStmnt: Any(n.ReturnStmnt, n.AssignStmnt, n.VarDecl),
 	n.VarDecl: l(n.Variable, T.SemiCol),
 	n.ReturnStmnt: l(T.Return, T.SemiCol) | l(T.Return, n.Expr, T.SemiCol),
 
-	n.Variable: l(n.Type, T.Ident) | l(n.Type, T.Ident, T.Asign, n.Expr),
+	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr, T.SemiCol),
+
+	n.Variable: l(n.Type, T.Ident) | l(n.Type, T.Ident, T.Assign, n.Expr),
 
 	n.Type: Any(T.tVoid, T.i32, T.i64)
 ];
@@ -154,8 +155,6 @@ struct FuncHeader {
 }
 struct Expression {
 	align(1):
-	union {
-		ulong num;
-	}
+	void* value;
 	Token type;
 }

@@ -60,6 +60,7 @@ void compile(char* code)
 							case 2: assert(0, "Error: Number overflows - too large");
 							case -1: assert(0, "Corrupt NumLiteral");
 						}
+						expr.value = gen.toValue(num, expr.type);
 						value = cast(ubyte[])(&expr)[0..1];
 					break;
 				}
@@ -72,8 +73,7 @@ void compile(char* code)
 				parser.reduce(prod);
 
 				switch(prod.nonTerm) {
-					case n.Args, n.ArgsHead:
-					{
+					case n.Args, n.ArgsHead: {
 						if(prod.length <= 1) {
 							argCounter = 0;
 							break;
@@ -88,8 +88,7 @@ void compile(char* code)
 						argCounter++;
 						dataStack.add(cast(ubyte)(args+1));
 					} break;
-					case n.FuncHeader:
-					{
+					case n.FuncHeader: {
 						if(dataStack.length < FuncHeader.sizeof) {
 							dataStack.add(0);
 						}
@@ -101,9 +100,9 @@ void compile(char* code)
 
 						Variable[] args = argBuffer[$-fh.args..$];
 						semant.lastFunc = fh;
-						SymbolData symData = SymbolData(fh.decl.ident, fh.decl.type, args);
+						void* funcRef = gen.addFunc(fh.decl, args);
+						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, args);
 						symTable.add(symData);
-						gen.addFunc(fh.decl, args);
 					} break;
 					case n.VarDecl: {
 						Variable var = *cast(Variable*)&dataStack[$-Variable.sizeof];
@@ -111,12 +110,24 @@ void compile(char* code)
 						if(symTable.search(var.ident)) {
 							assert(0, "Error: Declaration shadows previous symbol");
 						}
-						gen.addVar(var);
-						SymbolData data = SymbolData(var.ident, var.type);
+						void* varRef = gen.addVar(var);
+						SymbolData data = SymbolData(var.ident, varRef, var.type);
 						symTable.add(data);
 					} break;
-					case n.ReturnStmnt:
-					{
+					case n.AssignStmnt: {
+						Expression expr = *cast(Expression*)&dataStack[$-Expression.sizeof];
+						dataStack.pop(Expression.sizeof);
+						string ident = *cast(string*)&dataStack[$-string.sizeof];
+						dataStack.pop(string.sizeof);
+
+						SymbolData* var = symTable.search(ident);
+						if(!var) {
+							assert(0, "Error: undefined identifier");
+						}
+						var.valueRef = gen.addAssign(expr.value, var.valueRef);
+
+					} break;
+					case n.ReturnStmnt: {
 						switch(prod.length) {
 							case 2: {
 								semant.checkRet(T.tVoid);
@@ -126,7 +137,7 @@ void compile(char* code)
 								Expression expr = *cast(Expression*)&dataStack[$-Expression.sizeof];
 								dataStack.pop(Expression.sizeof);
 								semant.checkRet(expr.type);
-								gen.addRet(cast(uint)expr.num);
+								gen.addRet(expr.value);
 							} break;
 							default: assert(0);
 						}
