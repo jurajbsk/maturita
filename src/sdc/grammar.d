@@ -129,16 +129,15 @@ enum Rule[NonTerm.max+1] grammarTable = [
 
 	n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
-	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt),
+	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
 	n.Expr: l(T.NumLiteral),
 	n.ExprStmnt: Any(n.ReturnStmnt, n.AssignStmnt, n.VarDecl),
-	n.VarDecl: l(n.Variable, T.SemiCol),
-	n.ReturnStmnt: l(T.Return, T.SemiCol) | l(T.Return, n.Expr, T.SemiCol),
+	n.VarDecl: l(n.Type, T.Ident),
+	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
+	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr) | l(n.VarDecl, T.Assign, n.Expr),
 
-	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr, T.SemiCol),
-
-	n.Variable: l(n.Type, T.Ident) | l(n.Type, T.Ident, T.Assign, n.Expr),
+	n.Variable: l(n.Type, T.Ident),
 
 	n.Type: Any(T.tVoid, T.i32, T.i64)
 ];
