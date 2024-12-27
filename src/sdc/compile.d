@@ -10,17 +10,26 @@ import sdc.codegen : CodeGen;
 alias T = Token;
 alias n = NonTerm;
 
+union ParseData {
+	Variable var;
+	FuncHeader func;
+	struct {
+		Variable _v;
+		Expression expr;
+	}
+}
+
 void compile(char* code)
 {
 	Parser parser = Parser(code);
-	List!ubyte dataStack;
+	ParseData codeData;
 	List!Variable argBuffer;
+
 	SymbolTable symTable;
 	CodeGen gen;
 	gen.initialize();
 
-	Semantic semant;
-	ushort argCounter;
+	Semantic sem;
 
 	loop: while(true) {
 		Action action = parser.next();
@@ -29,15 +38,13 @@ void compile(char* code)
 		with(ActionType)
 		final switch(action.type) {
 			case Shift: {
-				ubyte[] value;
 				switch(token) {
 					default: break;
 					case T.Ident:
-						string[1] curString = [curStr];
-						value = cast(ubyte[])curString;
+						codeData.var.ident = curStr;
 					break;
 					case T.tVoid, T.i32, T.i64:
-						value = cast(ubyte[])(&token)[0..1];
+						codeData.var.type = token;
 					break;
 					case T.NumLiteral:
 						import lib.string;
@@ -61,10 +68,15 @@ void compile(char* code)
 							case -1: assert(0, "Corrupt NumLiteral");
 						}
 						expr.value = gen.toValue(num, expr.type);
-						value = cast(ubyte[])(&expr)[0..1];
+						codeData.expr = expr;
 					break;
 				}
-				dataStack.add(value);
+
+				debug {
+					import lib.io;
+					//writeln(parser.tokenizer.locs, ": ", token);
+				}
+
 				parser.shift(action.state);
 			} break;
 
@@ -75,38 +87,28 @@ void compile(char* code)
 				switch(prod.nonTerm) {
 					case n.Args, n.ArgsHead: {
 						if(prod.length <= 1) {
-							argCounter = 0;
 							break;
 						}
-						Variable var = *cast(Variable*)&dataStack[$-Variable.sizeof];
-						dataStack.pop(Variable.sizeof);
+						Variable var = codeData.var;
 						argBuffer.add(var);
-						ubyte args;
-						if(argCounter) {
-							args = dataStack.pop();
-						}
-						argCounter++;
-						dataStack.add(cast(ubyte)(args+1));
+						codeData.func.args++;
 					} break;
 					case n.FuncHeader: {
-						if(dataStack.length < FuncHeader.sizeof) {
-							dataStack.add(0);
-						}
-						FuncHeader fh = *cast(FuncHeader*)&dataStack[$-FuncHeader.sizeof];
-						dataStack.pop(FuncHeader.sizeof);
+						FuncHeader fh;
+						fh.decl = sem.lastFunc.decl;
+						fh.args = codeData.func.args;
 						if(symTable.search(fh.decl.ident)) {
 							assert(0, "Duplicate name");
 						}
 
 						Variable[] args = argBuffer[$-fh.args..$];
-						semant.lastFunc = fh;
+						sem.lastFunc = fh;
 						void* funcRef = gen.addFunc(fh.decl, args);
 						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, args);
 						symTable.add(symData);
 					} break;
 					case n.VarDecl: {
-						Variable var = *cast(Variable*)&dataStack[$-Variable.sizeof];
-						dataStack.pop(Variable.sizeof);
+						Variable var = codeData.var;
 						if(symTable.search(var.ident)) {
 							assert(0, "Error: Declaration shadows previous symbol");
 						}
@@ -115,10 +117,8 @@ void compile(char* code)
 						symTable.add(data);
 					} break;
 					case n.AssignStmnt: {
-						Expression expr = *cast(Expression*)&dataStack[$-Expression.sizeof];
-						dataStack.pop(Expression.sizeof);
-						string ident = *cast(string*)&dataStack[$-string.sizeof];
-						dataStack.pop(string.sizeof);
+						Expression expr = codeData.expr;
+						string ident = codeData.var.ident;
 
 						SymbolData* var = symTable.search(ident);
 						if(!var) {
@@ -129,39 +129,33 @@ void compile(char* code)
 					} break;
 					case n.ReturnStmnt: {
 						switch(prod.length) {
-							case 2: {
-								semant.checkRet(T.tVoid);
+							case 1: {
+								sem.checkRet(T.tVoid);
 								gen.addRetVoid();
 							} break;
-							case 3: {
-								Expression expr = *cast(Expression*)&dataStack[$-Expression.sizeof];
-								dataStack.pop(Expression.sizeof);
-								semant.checkRet(expr.type);
+							case 2: {
+								Expression expr = codeData.expr;
+								sem.checkRet(expr.type);
 								gen.addRet(expr.value);
 							} break;
 							default: assert(0);
 						}
+					} break;
+					case n.Variable: {
+						if(sem.lastFunc == FuncHeader()) {
+							sem.lastFunc = codeData.func;
+						}
+					} break;
+					case n.FuncDecl: {
+						sem.lastFunc = FuncHeader();
+						codeData = ParseData();
 					} break;
 					default: break;
 				}
 
 				debug {
 					import lib.io;
-					switch(prod.nonTerm) {
-						default: break;
-						case n.Type: {
-							writeln(*cast(Token*)&dataStack[$-Token.sizeof]);
-						} break;
-						case n.Variable: {
-							writeln(*cast(Variable*)&dataStack[$-Variable.sizeof]);
-						} break;
-						case n.Args: {
-							writeln(argBuffer._array);
-						} break;
-						case n.Expr: {
-							writeln(*cast(ulong*)&dataStack[$-ulong.sizeof]);
-						} break;
-					}
+					writeln(parser.tokenizer.locs, ": ", prod.nonTerm);
 				}
 			} break;
 

@@ -144,17 +144,18 @@ enum Rule[NonTerm.max+1] grammarTable = [
 ];
 
 struct Variable {
-	align(1):
 	Token type;
 	string ident;
 }
 struct FuncHeader {
-	align(1):
 	Variable decl;
 	ubyte args;
 }
 struct Expression {
-	align(1):
 	void* value;
 	Token type;
+}
+struct Assign {
+	Variable var;
+	Expression expr;
 }
