@@ -95,13 +95,13 @@ enum NonTerm : ubyte {
 	StmntList,
 	Stmnt,
 
-	Expr,
 	ExprStmnt,
 	VarDecl,
 	ReturnStmnt,
 	AssignStmnt,
 
-	Variable,
+	Expr,
+	Var,
 	Type,
 }
 private {
@@ -123,22 +123,21 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.TopList: l(n.FuncDecl) | l(n.TopList, n.FuncDecl),
 
 	n.FuncDecl: l(n.FuncHeader, n.StmntBody),
-	n.FuncHeader: l(n.Variable, T.LParen, n.ArgsHead, T.RParen),
-	n.ArgsHead: l(n.Args) | l(n.Args, n.Variable),
-	n.Args: l(n.Args, n.Variable, T.Comma) | l(null),
+	n.FuncHeader: l(n.Type, T.Ident, T.LParen, n.ArgsHead, T.RParen),
+	n.ArgsHead: l(n.Args) | l(n.Args, n.Type, T.Ident),
+	n.Args: l(n.Args, n.Type, T.Ident, T.Comma) | l(null),
 
 	n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
 	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
-	n.Expr: l(T.NumLiteral),
 	n.ExprStmnt: Any(n.ReturnStmnt, n.AssignStmnt, n.VarDecl),
 	n.VarDecl: l(n.Type, T.Ident),
 	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
 	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr) | l(n.VarDecl, T.Assign, n.Expr),
 
-	n.Variable: l(n.Type, T.Ident),
-
+	n.Expr: Any(T.NumLiteral, n.Var),
+	n.Var: l(T.Ident),
 	n.Type: Any(T.tVoid, T.i32, T.i64)
 ];
 
@@ -151,8 +150,12 @@ struct FuncHeader {
 	ubyte args;
 }
 struct Expression {
-	void* value;
 	Token type;
+	union {
+		ulong num;
+		string str;
+		void* value;
+	}
 }
 struct Assign {
 	Variable var;

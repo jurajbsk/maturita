@@ -97,6 +97,10 @@ struct CodeGen {
 	{
 		return LLVMBuildStore(builder, cast(LLVMValueRef)value, cast(LLVMValueRef)var);
 	}
+	void* addLoad(void* var, Token type) {
+		LLVMTypeRef llvmType = mapType(type);
+		return LLVMBuildLoad2(builder, llvmType, cast(LLVMValueRef)var, "");
+	}
 
 	void dumpIR(string fileName) {
 		char* error;

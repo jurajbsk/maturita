@@ -1,7 +1,7 @@
 name "sdc"
 description "A custom compiler"
 authors "Juraj B."
-copyright "Copyright (C) 2024, Juraj B."
+copyright "Copyright (C) 2025, Juraj B."
 license "proprietary"
 
 dependency "lib" version="*"

@@ -16,11 +16,10 @@ struct SymbolTable {
 	List!SymbolData table;
 	ulong scopeLen;
 
-	SymbolData* add(SymbolData data)
+	void add(SymbolData data)
 	{
 		table.add(data);
 		scopeLen++;
-		return &table[$-1];
 	}
 	SymbolData* search(string name)
 	{

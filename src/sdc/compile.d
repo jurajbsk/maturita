@@ -10,13 +10,10 @@ import sdc.codegen : CodeGen;
 alias T = Token;
 alias n = NonTerm;
 
-union ParseData {
+struct ParseData {
 	Variable var;
-	FuncHeader func;
-	struct {
-		Variable _v;
-		Expression expr;
-	}
+	Expression expr;
+	ubyte args;
 }
 
 void compile(char* code)
@@ -41,10 +38,18 @@ void compile(char* code)
 				switch(token) {
 					default: break;
 					case T.Ident:
-						codeData.var.ident = curStr;
+						if(!codeData.var.ident) {
+							codeData.var.ident = curStr;
+						}
+						codeData.expr.str = curStr;
 					break;
 					case T.tVoid, T.i32, T.i64:
-						codeData.var.type = token;
+						if(!codeData.var.type) {
+							codeData.var.type = token;
+						}
+						else {
+							codeData.expr.type = token;
+						}
 					break;
 					case T.NumLiteral:
 						import lib.string;
@@ -83,20 +88,27 @@ void compile(char* code)
 			case Reduce: {
 				Prod prod = action.reduce;
 				parser.reduce(prod);
+				debug {
+					import lib.io;
+					writeln(parser.tokenizer.locs, ": ", prod.nonTerm);
+				}
 
 				switch(prod.nonTerm) {
+					case n.Stmnt: {
+						codeData = ParseData();
+					} break;
 					case n.Args, n.ArgsHead: {
 						if(prod.length <= 1) {
 							break;
 						}
-						Variable var = codeData.var;
+						Variable var = Variable(codeData.expr.type, codeData.expr.str);
 						argBuffer.add(var);
-						codeData.func.args++;
+						codeData.args++;
 					} break;
 					case n.FuncHeader: {
 						FuncHeader fh;
-						fh.decl = sem.lastFunc.decl;
-						fh.args = codeData.func.args;
+						fh.decl = codeData.var;
+						fh.args = codeData.args;
 						if(symTable.search(fh.decl.ident)) {
 							assert(0, "Duplicate name");
 						}
@@ -106,6 +118,7 @@ void compile(char* code)
 						void* funcRef = gen.addFunc(fh.decl, args);
 						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, args);
 						symTable.add(symData);
+						codeData = ParseData();
 					} break;
 					case n.VarDecl: {
 						Variable var = codeData.var;
@@ -113,7 +126,9 @@ void compile(char* code)
 							assert(0, "Error: Declaration shadows previous symbol");
 						}
 						void* varRef = gen.addVar(var);
-						SymbolData data = SymbolData(var.ident, varRef, var.type);
+						SymbolData data = SymbolData(name: var.ident, valueRef: varRef, type: var.type);
+						import lib.io;
+						writeln(var.ident, ' ', varRef);
 						symTable.add(data);
 					} break;
 					case n.AssignStmnt: {
@@ -124,7 +139,7 @@ void compile(char* code)
 						if(!var) {
 							assert(0, "Error: undefined identifier");
 						}
-						var.valueRef = gen.addAssign(expr.value, var.valueRef);
+						gen.addAssign(expr.value, var.valueRef);
 
 					} break;
 					case n.ReturnStmnt: {
@@ -141,21 +156,21 @@ void compile(char* code)
 							default: assert(0);
 						}
 					} break;
-					case n.Variable: {
-						if(sem.lastFunc == FuncHeader()) {
-							sem.lastFunc = codeData.func;
+					case n.Plus {
+						
+					} break;
+					case n.Var: {
+						SymbolData* var = symTable.search(codeData.expr.str);
+						if(!var) {
+							assert(0, "Error: undefined identifier");
 						}
+						codeData.expr.value = gen.addLoad(var.valueRef, var.type);
 					} break;
 					case n.FuncDecl: {
 						sem.lastFunc = FuncHeader();
 						codeData = ParseData();
 					} break;
 					default: break;
-				}
-
-				debug {
-					import lib.io;
-					writeln(parser.tokenizer.locs, ": ", prod.nonTerm);
 				}
 			} break;
 
