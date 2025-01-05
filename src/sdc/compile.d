@@ -10,16 +10,33 @@ import sdc.codegen : CodeGen;
 alias T = Token;
 alias n = NonTerm;
 
-struct ParseData {
-	Variable var;
-	Expression expr;
-	ubyte args;
+union ParseData {
+	ulong num;
+	string str;
+	struct {
+		Token type;
+		void* value;
+	}
+}
+
+struct DataBuffer {
+	ParseData[5] array;
+	ubyte length;
+	void add(ParseData data) {
+		array[length] = data;
+		length++;
+	}
+	ParseData pop() {
+		length--;
+		return array[length];
+	}
 }
 
 void compile(char* code)
 {
 	Parser parser = Parser(code);
-	ParseData codeData;
+	DataBuffer dataStack;
+	ubyte args;
 	List!Variable argBuffer;
 
 	SymbolTable symTable;
@@ -37,31 +54,23 @@ void compile(char* code)
 			case Shift: {
 				switch(token) {
 					default: break;
-					case T.Ident:
-						if(!codeData.var.ident) {
-							codeData.var.ident = curStr;
-						}
-						codeData.expr.str = curStr;
-					break;
-					case T.tVoid, T.i32, T.i64:
-						if(!codeData.var.type) {
-							codeData.var.type = token;
-						}
-						else {
-							codeData.expr.type = token;
-						}
-					break;
+					case T.Ident: {
+						dataStack.add(ParseData(str: curStr));
+					} break;
+					case T.tVoid, T.i32, T.i64: {
+						dataStack.add(ParseData(type: token));
+					} break;
 					case T.NumLiteral:
 						import lib.string;
 						StrNum num = strToNum(curStr);
-						Expression expr;
+						ParseData data;
 						final switch(num.sign) {
 							case 0: {
 								if(num <= uint.max) {
-									expr.type = T.i32;
+									data.type = T.i32;
 								}
 								else {
-									expr.type = T.i64;
+									data.type = T.i64;
 								}
 							} break;
 							case 1: {
@@ -72,8 +81,8 @@ void compile(char* code)
 							case 2: assert(0, "Error: Number overflows - too large");
 							case -1: assert(0, "Corrupt NumLiteral");
 						}
-						expr.value = gen.toValue(num, expr.type);
-						codeData.expr = expr;
+						data.value = gen.toValue(num, data.type);
+						dataStack.add(data);
 					break;
 				}
 
@@ -94,52 +103,55 @@ void compile(char* code)
 				}
 
 				switch(prod.nonTerm) {
-					case n.Stmnt: {
-						codeData = ParseData();
-					} break;
 					case n.Args, n.ArgsHead: {
 						if(prod.length <= 1) {
 							break;
 						}
-						Variable var = Variable(codeData.expr.type, codeData.expr.str);
-						argBuffer.add(var);
-						codeData.args++;
+						string name = dataStack.pop().str;
+						Token type = dataStack.pop().type;
+						argBuffer.add(Variable(type, name));
+						args++;
+					} break;
+					case n.Stmnt: {
+						dataStack = DataBuffer();
 					} break;
 					case n.FuncHeader: {
 						FuncHeader fh;
-						fh.decl = codeData.var;
-						fh.args = codeData.args;
+						fh.args = args;
+						args = 0;
+						fh.decl.ident = dataStack.pop().str;
+						fh.decl.type = dataStack.pop().type;
 						if(symTable.search(fh.decl.ident)) {
 							assert(0, "Duplicate name");
 						}
 
-						Variable[] args = argBuffer[$-fh.args..$];
+						Variable[] argList = argBuffer[$-fh.args..$];
 						sem.lastFunc = fh;
-						void* funcRef = gen.addFunc(fh.decl, args);
-						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, args);
+						void* funcRef = gen.addFunc(fh.decl, argList);
+						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, argList);
 						symTable.add(symData);
-						codeData = ParseData();
 					} break;
 					case n.VarDecl: {
-						Variable var = codeData.var;
+						Variable var;
+						var.ident = dataStack.pop().str;
+						var.type = dataStack.pop().type;
+						dataStack.add(ParseData(str: var.ident));
 						if(symTable.search(var.ident)) {
 							assert(0, "Error: Declaration shadows previous symbol");
 						}
 						void* varRef = gen.addVar(var);
 						SymbolData data = SymbolData(name: var.ident, valueRef: varRef, type: var.type);
-						import lib.io;
-						writeln(var.ident, ' ', varRef);
 						symTable.add(data);
 					} break;
 					case n.AssignStmnt: {
-						Expression expr = codeData.expr;
-						string ident = codeData.var.ident;
+						ParseData data = dataStack.pop();
+						string ident = dataStack.pop().str;
 
 						SymbolData* var = symTable.search(ident);
 						if(!var) {
 							assert(0, "Error: undefined identifier");
 						}
-						gen.addAssign(expr.value, var.valueRef);
+						gen.addAssign(data.value, var.valueRef);
 
 					} break;
 					case n.ReturnStmnt: {
@@ -149,9 +161,9 @@ void compile(char* code)
 								gen.addRetVoid();
 							} break;
 							case 2: {
-								Expression expr = codeData.expr;
-								sem.checkRet(expr.type);
-								gen.addRet(expr.value);
+								ParseData data = dataStack.pop();
+								sem.checkRet(data.type);
+								gen.addRet(data.value);
 							} break;
 							default: assert(0);
 						}
@@ -160,15 +172,16 @@ void compile(char* code)
 						
 					} break;
 					case n.Var: {
-						SymbolData* var = symTable.search(codeData.expr.str);
+						string ident = dataStack.pop().str;
+						SymbolData* var = symTable.search(ident);
 						if(!var) {
 							assert(0, "Error: undefined identifier");
 						}
-						codeData.expr.value = gen.addLoad(var.valueRef, var.type);
+						void* value = gen.addLoad(var.valueRef, var.type);
+						dataStack.add(ParseData(type: var.type, value: value));
 					} break;
 					case n.FuncDecl: {
 						sem.lastFunc = FuncHeader();
-						codeData = ParseData();
 					} break;
 					default: break;
 				}

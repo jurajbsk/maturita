@@ -149,15 +149,3 @@ struct FuncHeader {
 	Variable decl;
 	ubyte args;
 }
-struct Expression {
-	Token type;
-	union {
-		ulong num;
-		string str;
-		void* value;
-	}
-}
-struct Assign {
-	Variable var;
-	Expression expr;
-}
