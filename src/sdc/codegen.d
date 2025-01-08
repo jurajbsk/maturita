@@ -66,6 +66,7 @@ struct CodeGen {
 
 		LLVMBasicBlockRef entryBlock = LLVMAppendBasicBlockInContext(context, func, "");
         LLVMPositionBuilderAtEnd(builder, entryBlock);
+		buffer.clear();
 		return func;
 	}
 	void addRet(void* value)
@@ -100,6 +101,10 @@ struct CodeGen {
 	void* addLoad(void* var, Token type) {
 		LLVMTypeRef llvmType = mapType(type);
 		return LLVMBuildLoad2(builder, llvmType, cast(LLVMValueRef)var, "");
+	}
+	void* addPlus(void* leftValue, void* rightValue)
+	{
+		return LLVMBuildAdd(builder, cast(LLVMValueRef)leftValue, cast(LLVMValueRef)rightValue, "");
 	}
 
 	void dumpIR(string fileName) {

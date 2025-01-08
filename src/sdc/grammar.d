@@ -70,6 +70,7 @@ enum Token : ubyte {
 	Comma,
 	SemiCol,
 	Assign,
+	Plus,
 
 	Module,
 	Import,
@@ -101,6 +102,8 @@ enum NonTerm : ubyte {
 	AssignStmnt,
 
 	Expr,
+	Term,
+	Plus,
 	Var,
 	Type,
 }
@@ -136,7 +139,9 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
 	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr) | l(n.VarDecl, T.Assign, n.Expr),
 
-	n.Expr: Any(T.NumLiteral, n.Var),
+	n.Expr: Any(n.Term, n.Plus),
+	n.Term: Any(T.NumLiteral, n.Var),
+	n.Plus: l(n.Expr, T.Plus, n.Term),
 	n.Var: l(T.Ident),
 	n.Type: Any(T.tVoid, T.i32, T.i64)
 ];

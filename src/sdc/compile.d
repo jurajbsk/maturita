@@ -168,8 +168,11 @@ void compile(char* code)
 							default: assert(0);
 						}
 					} break;
-					case n.Plus {
-						
+					case n.Plus: {
+						ParseData rExpr = dataStack.pop();
+						ParseData lExpr = dataStack.pop();
+						void* value = gen.addPlus(lExpr.value, rExpr.value);
+						dataStack.add(ParseData(type: rExpr.type, value: value));
 					} break;
 					case n.Var: {
 						string ident = dataStack.pop().str;

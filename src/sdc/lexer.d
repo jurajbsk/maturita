@@ -10,6 +10,7 @@ immutable Token[char.max] resSymbols = [
 	',': T.Comma,
 	';': T.SemiCol,
 	'=': T.Assign,
+	'+': T.Plus,
 ];
 immutable string[] resKeywords = [
 	T.Module: "module",
