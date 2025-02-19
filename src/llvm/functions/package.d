@@ -54,7 +54,7 @@ LLVMBool LLVMInitializeNativeTarget()
         return 1;
     }
 }
-
+extern(C) LLVMBool LLVMInitializeX86AsmPrinter();
 static if (LLVM_Version >= asVersion(3, 4, 0))
 {
     // nothrow LLVMBool LLVMInitializeNativeAsmParser()
@@ -66,7 +66,6 @@ static if (LLVM_Version >= asVersion(3, 4, 0))
     //         return 1;
     //     }
     // }
-
     // nothrow LLVMBool LLVMInitializeNativeAsmPrinter()
     // {
     //     static if (LLVM_NativeTarget != "") {

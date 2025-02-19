@@ -115,4 +115,19 @@ struct CodeGen {
 			writeln(parseCStr(error));
 		}
 	}
+	void dumpObject(string fileName) {
+		LLVMInitializeX86AsmPrinter();
+		char* error;
+		char* triple = LLVMGetDefaultTargetTriple();
+		LLVMSetTarget(mod, triple);
+		LLVMTargetRef target;
+		LLVMGetTargetFromTriple(triple, &target, &error);
+		LLVMTargetMachineRef targetMachine = LLVMCreateTargetMachine(target, triple, "generic", "",
+			LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
+		LLVMTargetMachineEmitToFile(targetMachine, mod, cast(char*)"object.o", LLVMObjectFile, &error);
+		import lib.string, lib.io;
+		if(error) {
+			writeln(parseCStr(error));
+		}
+	}
 }

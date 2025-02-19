@@ -203,7 +203,7 @@ void compile(char* code)
 						}
 						if(ac.type == ActionType.Reduce) {
 							//stateList.add(_ptable.gotoTable[state][ac.reduce.nonTerm]);
-							//continue;
+							continue;
 						}
 						write(i_tok, ' ');
 					}
@@ -213,7 +213,7 @@ void compile(char* code)
 			}
 
 			case Accept: {
-				gen.dumpIR("test.ll");
+				gen.dumpObject("test.ll");
 				break loop;
 			}
 		}

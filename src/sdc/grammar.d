@@ -126,9 +126,8 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.TopList: l(n.FuncDecl) | l(n.TopList, n.FuncDecl),
 
 	n.FuncDecl: l(n.FuncHeader, n.StmntBody),
-	n.FuncHeader: l(n.Type, T.Ident, T.LParen, n.ArgsHead, T.RParen),
-	n.ArgsHead: l(n.Args) | l(n.Args, n.Type, T.Ident),
-	n.Args: l(n.Args, n.Type, T.Ident, T.Comma) | l(null),
+	n.FuncHeader: l(n.Type, T.Ident, T.LParen, n.Args, T.RParen),
+	n.Args: l(n.Type, T.Ident) | l(n.Args, T.Comma, n.Type, T.Ident) | l(null),
 
 	n.StmntBody: l(T.LBrace, n.StmntList, T.RBrace),
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
