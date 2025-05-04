@@ -63,6 +63,7 @@ struct Rule {
 enum Token : ubyte {
 	EOF,
 
+	Addr,
 	LBrace,
 	RBrace,
 	LParen,
@@ -81,12 +82,14 @@ enum Token : ubyte {
 	i64,
 
 	Ident,
-	NumLiteral,
+	NumLit,
 }
 enum NonTerm : ubyte {
 	File,
 	TopList,
+	Top,
 
+	FuncExtern,
 	FuncDecl,
 	FuncHeader,
 	ArgsHead,
@@ -100,6 +103,9 @@ enum NonTerm : ubyte {
 	VarDecl,
 	ReturnStmnt,
 	AssignStmnt,
+
+	FuncCall,
+	CallArgs,
 
 	Expr,
 	Term,
@@ -123,7 +129,10 @@ private {
 }
 enum Rule[NonTerm.max+1] grammarTable = [
 	n.File: l(n.TopList),
-	n.TopList: l(n.FuncDecl) | l(n.TopList, n.FuncDecl),
+	n.TopList: l(n.Top) | l(n.TopList, n.Top),
+	n.Top: Any(n.FuncDecl, n.FuncExtern),
+
+	n.FuncExtern: l(n.Type, T.Ident, T.LParen, n.Args, T.RParen, T.SemiCol),
 
 	n.FuncDecl: l(n.FuncHeader, n.StmntBody),
 	n.FuncHeader: l(n.Type, T.Ident, T.LParen, n.Args, T.RParen),
@@ -133,13 +142,16 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.StmntList: l(n.Stmnt) | l(n.Stmnt, n.StmntList),
 	n.Stmnt: /*l(n.StmntType, n.StmntBody) |*/ l(n.ExprStmnt, T.SemiCol),
 
-	n.ExprStmnt: Any(n.ReturnStmnt, n.AssignStmnt, n.VarDecl),
+	n.ExprStmnt: Any(n.ReturnStmnt, n.AssignStmnt, n.VarDecl, n.FuncCall),
 	n.VarDecl: l(n.Type, T.Ident),
 	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
 	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr) | l(n.VarDecl, T.Assign, n.Expr),
 
-	n.Expr: Any(n.Term, n.Plus),
 	n.Term: Any(T.NumLiteral, n.Var),
+	n.FuncCall: l(T.Ident, T.LParen, n.CallArgs, T.RParen),
+	n.CallArgs: l(n.Expr) | l(n.CallArgs, T.Comma, n.Expr) | l(null),
+
+	n.Expr: Any(n.Term, n.Plus, n.FuncCall),
 	n.Plus: l(n.Expr, T.Plus, n.Term),
 	n.Var: l(T.Ident),
 	n.Type: Any(T.tVoid, T.i32, T.i64)

@@ -64,18 +64,34 @@ struct CodeGen {
 			LLVMSetValueName2(param, arg.ident.ptr, arg.ident.length);
 		}
 
-		LLVMBasicBlockRef entryBlock = LLVMAppendBasicBlockInContext(context, func, "");
-        LLVMPositionBuilderAtEnd(builder, entryBlock);
+		if(!external) {
+			LLVMBasicBlockRef entryBlock = LLVMAppendBasicBlockInContext(context, func, "");
+			LLVMPositionBuilderAtEnd(builder, entryBlock);
+		}
 		buffer.clear();
 		return func;
 	}
-	void addRet(void* value)
-	{
+	void addRet(void* value) {
 		LLVMBuildRet(builder, cast(LLVMValueRef)value);
 	}
-	void addRetVoid()
-	{
+	void addRetVoid() {
 		LLVMBuildRetVoid(builder);
+	}
+	void* addCall(void* func, void*[] argVals)
+	{
+		LLVMValueRef[] llvmArgs = cast(LLVMValueRef[])argVals;
+		LLVMTypeRef funcType = LLVMGlobalGetValueType(cast(LLVMValueRef)func);
+		import lib.io;
+		char* x = LLVMPrintValueToString(cast(LLVMValueRef)func);
+		for(int i=0; x[i] !=0; i++) write(x[i]);
+		write('X');
+		x = LLVMPrintTypeToString(cast(LLVMTypeRef)funcType);
+		for(int i=0; x[i] !=0; i++) write(x[i]);
+		write('X');
+		x = LLVMPrintValueToString(llvmArgs[0]);
+		for(int i=0; x[i] !=0; i++) write(x[i]);
+		write('X');
+		return LLVMBuildCall2(builder, funcType, cast(LLVMValueRef)func, llvmArgs.ptr, cast(uint)llvmArgs.length, "");
 	}
 	void* addVar(Variable var)
 	{
@@ -98,7 +114,8 @@ struct CodeGen {
 	{
 		return LLVMBuildStore(builder, cast(LLVMValueRef)value, cast(LLVMValueRef)var);
 	}
-	void* addLoad(void* var, Token type) {
+	void* addLoad(void* var, Token type)
+	{
 		LLVMTypeRef llvmType = mapType(type);
 		return LLVMBuildLoad2(builder, llvmType, cast(LLVMValueRef)var, "");
 	}
@@ -107,7 +124,8 @@ struct CodeGen {
 		return LLVMBuildAdd(builder, cast(LLVMValueRef)leftValue, cast(LLVMValueRef)rightValue, "");
 	}
 
-	void dumpIR(string fileName) {
+	void dumpIR(string fileName)
+	{
 		char* error;
 		LLVMPrintModuleToFile(mod, fileName.ptr, &error);
 		import lib.string, lib.io;
@@ -115,7 +133,8 @@ struct CodeGen {
 			writeln(parseCStr(error));
 		}
 	}
-	void dumpObject(string fileName) {
+	void dumpObject(string fileName)
+	{
 		LLVMInitializeX86AsmPrinter();
 		char* error;
 		char* triple = LLVMGetDefaultTargetTriple();

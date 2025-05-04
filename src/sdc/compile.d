@@ -7,6 +7,8 @@ import sdc.symtable;
 import sdc.semantic;
 import sdc.codegen : CodeGen;
 
+debug import lib.io;
+
 alias T = Token;
 alias n = NonTerm;
 
@@ -32,12 +34,20 @@ struct DataBuffer {
 	}
 }
 
+union Args {
+	Variable var;
+	struct {
+		Token type;
+		void* value;
+	}
+}
+
 void compile(char* code)
 {
 	Parser parser = Parser(code);
 	DataBuffer dataStack;
 	ubyte args;
-	List!Variable argBuffer;
+	List!Args argBuffer;
 
 	SymbolTable symTable;
 	CodeGen gen;
@@ -60,7 +70,7 @@ void compile(char* code)
 					case T.tVoid, T.i32, T.i64: {
 						dataStack.add(ParseData(type: token));
 					} break;
-					case T.NumLiteral:
+					case T.NumLit: {
 						import lib.string;
 						StrNum num = strToNum(curStr);
 						ParseData data;
@@ -83,7 +93,7 @@ void compile(char* code)
 						}
 						data.value = gen.toValue(num, data.type);
 						dataStack.add(data);
-					break;
+					} break;
 				}
 
 				debug {
@@ -103,13 +113,40 @@ void compile(char* code)
 				}
 
 				switch(prod.nonTerm) {
-					case n.Args, n.ArgsHead: {
+					case n.CallArgs: {
+						if(prod.length < 1) {
+							break;
+						}
+						ParseData expr = dataStack.pop();
+						Args ar;
+						ar.type = expr.type;
+						ar.value = expr.value;
+						argBuffer.add(ar);
+						args++;
+					} break;
+					case n.FuncCall: {
+						string ident = dataStack.pop.str;
+						SymbolData* func = symTable.search(ident);
+						if(!func) {
+							assert(0, "Error: undefined identifier");
+						}
+						void*[128] funcArgs;
+						foreach(i, c; argBuffer[$-args..$]) {
+							funcArgs[i] = c.value;
+						}
+						ParseData callVal;
+						callVal.value = gen.addCall(func.valueRef, funcArgs[0..args]);
+						callVal.type = func.type;
+						dataStack.add(callVal);
+						args = 0;
+					} break;
+					case n.Args: {
 						if(prod.length <= 1) {
 							break;
 						}
 						string name = dataStack.pop().str;
 						Token type = dataStack.pop().type;
-						argBuffer.add(Variable(type, name));
+						argBuffer.add(Args(Variable(type, name)));
 						args++;
 					} break;
 					case n.Stmnt: {
@@ -125,7 +162,7 @@ void compile(char* code)
 							assert(0, "Duplicate name");
 						}
 
-						Variable[] argList = argBuffer[$-fh.args..$];
+						Variable[] argList = cast(Variable[])argBuffer[$-fh.args..$];
 						sem.lastFunc = fh;
 						void* funcRef = gen.addFunc(fh.decl, argList);
 						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, argList);
@@ -186,6 +223,22 @@ void compile(char* code)
 					case n.FuncDecl: {
 						sem.lastFunc = FuncHeader();
 					} break;
+					case n.FuncExtern: {
+						FuncHeader fh;
+						fh.args = args;
+						args = 0;
+						fh.decl.ident = dataStack.pop().str;
+						fh.decl.type = dataStack.pop().type;
+						if(symTable.search(fh.decl.ident)) {
+							assert(0, "Duplicate name");
+						}
+
+						Variable[] argList = cast(Variable[])argBuffer[$-fh.args..$];
+						sem.lastFunc = fh;
+						void* funcRef = gen.addFunc(fh.decl, argList, true);
+						SymbolData symData = SymbolData(fh.decl.ident, funcRef, fh.decl.type, argList);
+						symTable.add(symData);
+					} break;
 					default: break;
 				}
 			} break;
@@ -208,12 +261,13 @@ void compile(char* code)
 						write(i_tok, ' ');
 					}
 				}
-				writeln("NOT: ", parser.curString);
+				writeln("NOT: ", token, ": ", parser.curString);
 				assert(0, "Parsing error");
 			}
 
 			case Accept: {
-				gen.dumpObject("test.ll");
+				gen.dumpIR("test.ll");
+				gen.dumpObject("a.out");
 				break loop;
 			}
 		}
