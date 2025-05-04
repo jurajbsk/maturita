@@ -3,6 +3,7 @@ import sdc.grammar : Token;
 
 alias T = Token;
 immutable Token[char.max] resSymbols = [
+	'&': T.Addr,
 	'{': T.LBrace,
 	'}': T.RBrace,
 	'(': T.LParen,
@@ -19,6 +20,7 @@ immutable string[] resKeywords = [
 	T.tVoid: "void",
 	T.i32: "int",
 	T.i64: "long",
+	T.str: "string",
 ];
 
 struct Tokenizer {
@@ -45,6 +47,7 @@ struct Tokenizer {
 			}
 			else if(length == 1) {
 				if(isSymbol) {
+
 					break;
 				}
 				else if(lastChar == '\n') {
@@ -58,9 +61,15 @@ struct Tokenizer {
 			token = T.Ident;
 			char[] buf = code[cursor..cursor+length];
 
-			// Number literals
+			// Literals
 			if(buf[0] <= '9' && buf[0] >= '0') {
-				token = T.NumLiteral;
+				token = T.NumLit;
+			}
+			if(buf[0] == '"') {
+				while(code[cursor+length-1] != '"') {
+					length++;
+				}
+				token = T.StrLit;
 			}
 			// Reserved keywords
 			else switch(buf) {

@@ -80,9 +80,11 @@ enum Token : ubyte {
 	tVoid,
 	i32,
 	i64,
+	str,
 
 	Ident,
 	NumLit,
+	StrLit,
 }
 enum NonTerm : ubyte {
 	File,
@@ -147,14 +149,14 @@ enum Rule[NonTerm.max+1] grammarTable = [
 	n.ReturnStmnt: l(T.Return) | l(T.Return, n.Expr),
 	n.AssignStmnt: l(T.Ident, T.Assign, n.Expr) | l(n.VarDecl, T.Assign, n.Expr),
 
-	n.Term: Any(T.NumLiteral, n.Var),
 	n.FuncCall: l(T.Ident, T.LParen, n.CallArgs, T.RParen),
 	n.CallArgs: l(n.Expr) | l(n.CallArgs, T.Comma, n.Expr) | l(null),
 
 	n.Expr: Any(n.Term, n.Plus, n.FuncCall),
+	n.Term: Any(T.NumLit, T.StrLit, n.Var),
 	n.Plus: l(n.Expr, T.Plus, n.Term),
 	n.Var: l(T.Ident),
-	n.Type: Any(T.tVoid, T.i32, T.i64)
+	n.Type: Any(T.tVoid, T.i32, T.i64, T.str),
 ];
 
 struct Variable {

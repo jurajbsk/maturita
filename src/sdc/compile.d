@@ -67,7 +67,7 @@ void compile(char* code)
 					case T.Ident: {
 						dataStack.add(ParseData(str: curStr));
 					} break;
-					case T.tVoid, T.i32, T.i64: {
+					case T.tVoid, T.i32, T.i64, T.str: {
 						dataStack.add(ParseData(type: token));
 					} break;
 					case T.NumLit: {
@@ -92,6 +92,13 @@ void compile(char* code)
 							case -1: assert(0, "Corrupt NumLiteral");
 						}
 						data.value = gen.toValue(num, data.type);
+						dataStack.add(data);
+					} break;
+					case T.StrLit: {
+						ParseData data;
+						data.type = T.str;
+						string str = parser.curString[1..$-1];
+						data.value = gen.toValue(str);
 						dataStack.add(data);
 					} break;
 				}

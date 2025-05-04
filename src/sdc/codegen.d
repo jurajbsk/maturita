@@ -11,6 +11,7 @@ LLVMTypeRef mapType(Token type)
 		case T.tVoid: return LLVMVoidType();
 		case T.i32: return LLVMInt32Type();
 		case T.i64: return LLVMInt64Type();
+		case T.str: return LLVMPointerType(LLVMInt8Type, 0);
 
 		default: {
 			import lib.io;
@@ -42,7 +43,13 @@ struct CodeGen {
 		LLVMTypeRef type = mapType(numType);
 		return LLVMConstInt(type, num, false);
 	}
-	void* addFunc(Variable decl, Variable[] args)
+	void* toValue(string str)
+	{
+		char[255] buf = str;
+		buf[str.length] = 0;
+		return LLVMBuildGlobalStringPtr(builder, buf.ptr, "str");
+	}
+	void* addFunc(Variable decl, Variable[] args, bool external = false)
 	{
 		foreach(arg; args) {
 			LLVMTypeRef llvmType = mapType(arg.type);
