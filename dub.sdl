@@ -14,7 +14,7 @@ buildType "release" {
 	sourceFiles "$LLVM_LIBS/*.lib"
 	libs "ntdll"
 }
-dflags "--flto=full" "--link-internally"
+dflags "--flto=full" "--link-internally" "-lowmem"
 copyFiles "$LLVM_BIN/LLVM-C.dll"
 targetPath "bin/$BUILD_TYPE"
 workingDirectory "bin/$BUILD_TYPE"

@@ -88,16 +88,6 @@ struct CodeGen {
 	{
 		LLVMValueRef[] llvmArgs = cast(LLVMValueRef[])argVals;
 		LLVMTypeRef funcType = LLVMGlobalGetValueType(cast(LLVMValueRef)func);
-		import lib.io;
-		char* x = LLVMPrintValueToString(cast(LLVMValueRef)func);
-		for(int i=0; x[i] !=0; i++) write(x[i]);
-		write('X');
-		x = LLVMPrintTypeToString(cast(LLVMTypeRef)funcType);
-		for(int i=0; x[i] !=0; i++) write(x[i]);
-		write('X');
-		x = LLVMPrintValueToString(llvmArgs[0]);
-		for(int i=0; x[i] !=0; i++) write(x[i]);
-		write('X');
 		return LLVMBuildCall2(builder, funcType, cast(LLVMValueRef)func, llvmArgs.ptr, cast(uint)llvmArgs.length, "");
 	}
 	void* addVar(Variable var)
@@ -130,6 +120,19 @@ struct CodeGen {
 	{
 		return LLVMBuildAdd(builder, cast(LLVMValueRef)leftValue, cast(LLVMValueRef)rightValue, "");
 	}
+	void* addSub(void* leftValue, void* rightValue)
+	{
+		return LLVMBuildSub(builder, cast(LLVMValueRef)leftValue, cast(LLVMValueRef)rightValue, "");
+	}
+	void* addMul(void* leftValue, void* rightValue)
+	{
+		return LLVMBuildMul(builder, cast(LLVMValueRef)leftValue, cast(LLVMValueRef)rightValue, "");
+	}
+	void* addDiv(void* leftValue, void* rightValue, bool signed)
+	{
+		typeof(&LLVMBuildUDiv) BuildDiv = signed ? &LLVMBuildSDiv : &LLVMBuildUDiv;
+		return BuildDiv(builder, cast(LLVMValueRef)leftValue, cast(LLVMValueRef)rightValue, "");
+	}
 
 	void dumpIR(string fileName)
 	{
@@ -155,5 +158,34 @@ struct CodeGen {
 		if(error) {
 			writeln(parseCStr(error));
 		}
+	}
+
+	void[] toMemObject()
+	{
+		LLVMInitializeX86AsmPrinter();
+		LLVMInitializeX86Target();
+		LLVMInitializeX86TargetInfo();
+		LLVMInitializeX86TargetMC();
+
+		char* error = null;
+		const(char)* triple = LLVMGetDefaultTargetTriple();
+
+		LLVMSetTarget(mod, triple);
+
+		LLVMTargetRef target;
+		LLVMGetTargetFromTriple(triple, &target, &error);
+
+		LLVMTargetMachineRef targetMachine = LLVMCreateTargetMachine(target, triple, "generic", "",
+			LLVMCodeGenLevelDefault, LLVMRelocDefault, LLVMCodeModelDefault);
+
+		LLVMMemoryBufferRef outBuffer;
+		LLVMTargetMachineEmitToMemoryBuffer(
+			targetMachine,
+			mod,
+			LLVMObjectFile,
+			&error,
+			&outBuffer);
+
+		return cast(void[])(LLVMGetBufferStart(outBuffer)[0..LLVMGetBufferSize(outBuffer)]);
 	}
 }

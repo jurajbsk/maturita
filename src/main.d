@@ -10,8 +10,9 @@ version(Windows) {
 extern(C) int main(int argc, char** args)
 {
 	// Handling args
-	/*string inPath, outPath;
-	for(ubyte i; i < argc; i++) {
+	string inPath, outPath, ip;
+	for(ubyte i; i < argc; i++)
+	{
 		string arg = parseCStr(args[i]);
 		switch(arg)
 		{
@@ -20,19 +21,28 @@ extern(C) int main(int argc, char** args)
 				outPath = parseCStr(args[i]);
 			} break;
 
+			case "--serve": {
+				import sdc.distribute;
+				openServer();
+				return 0;
+			} break;
+			case "--send": {
+				import sdc.distribute;
+				i++;
+				ip = parseCStr(args[i]);
+			} break;
+
 			default: {
-				if(arg[$-3..$] == ".d") {
-					inPath = arg;
-				}
+				inPath = arg;
 			} break;
 		}
-	} */
+	}
 
 	if(argc < 2) {
 		writeln("No source file specified.");
 		return -1;
 	}
-	void* file = CreateFileA(args[1], 0x80000000, 0x00000001, null, 3, 128, null);
+	void* file = CreateFileA(cast(char*)inPath.ptr, 0x80000000, 0x00000001, null, 3, 128, null);
 	if(cast(long)file == -1) {
 		writeln("No file named \"", parseCStr(args[1]), "\".");
 		return -1;
@@ -40,6 +50,11 @@ extern(C) int main(int argc, char** args)
 	void* mapping = CreateFileMappingA(file, null, 0x02, 0, 0);
 	char* sourceCode = cast(char*)MapViewOfFile(mapping, 0x04);
 	
+	if(ip) {
+		import sdc.distribute;
+		sendToServer(parseCStr(sourceCode), ip);
+		return 0;
+	}
 	debug {
 		import lib.time;
 		ulong time = getTicks();

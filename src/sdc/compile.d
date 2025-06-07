@@ -42,7 +42,7 @@ union Args {
 	}
 }
 
-void compile(char* code)
+void[] compile(char* code)
 {
 	Parser parser = Parser(code);
 	DataBuffer dataStack;
@@ -55,7 +55,7 @@ void compile(char* code)
 
 	Semantic sem;
 
-	loop: while(true) {
+	while(true) {
 		Action action = parser.next();
 		string curStr = parser.curString;
 		Token token = parser.curToken;
@@ -273,10 +273,9 @@ void compile(char* code)
 			}
 
 			case Accept: {
-				gen.dumpIR("test.ll");
-				gen.dumpObject("a.out");
-				break loop;
+				return gen.toMemObject();
 			}
 		}
 	}
+	return null;
 }
